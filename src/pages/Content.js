@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import emailjs from "@emailjs/browser";
 import rose from "../rose.jpg";
 import { call } from "../api/client";
 import { DEMO_CUSTOMER, formatDate, money, posts } from "../data/catalog";
@@ -44,20 +45,47 @@ export function BlogPost() {
   );
 }
 
+const MAIL_SERVICE = "service_t52cepr";
+const MAIL_TEMPLATE = "template_tt7sqi7";
+const MAIL_PUBLIC_KEY = "oDYDzwYQrLY_-YViZ";
+
 export function Contact() {
   useTitle("Contacts");
   const site = useSite();
   const [form, setForm] = useState({ name: "", email: "", topic: "General", message: "" });
   const [note, setNote] = useState("");
+  const [failed, setFailed] = useState(false);
+  const [sending, setSending] = useState(false);
 
   async function send(event) {
     event.preventDefault();
+    setSending(true);
+    setNote("");
+    setFailed(false);
     try {
-      await call("inquiry", form);
+      await emailjs.send(
+        MAIL_SERVICE,
+        MAIL_TEMPLATE,
+        {
+          name: form.name,
+          email: form.email,
+          message: `Topic: ${form.topic}\n\n${form.message}\n\nFrom: ${form.email}`,
+          reply_to: form.email,
+        },
+        { publicKey: MAIL_PUBLIC_KEY }
+      );
+      try {
+        await call("inquiry", form);
+      } catch (error) {
+        /* the email already went out; the desk copy is optional */
+      }
       setNote("The studio has your note.");
       setForm({ name: "", email: "", topic: "General", message: "" });
     } catch (error) {
-      setNote(error.message);
+      setFailed(true);
+      setNote(error?.text || error?.message || "The note could not be sent.");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -78,8 +106,8 @@ export function Contact() {
             </select>
           </label>
           <label>Message<textarea required rows="6" value={form.message} onChange={(event) => setField("message", event.target.value)} /></label>
-          <button className="btn" type="submit">Send</button>
-          {note && <p>{note}</p>}
+          <button className="btn" type="submit" disabled={sending}>{sending ? "Sending…" : "Send"}</button>
+          {note && <p className={failed ? "error" : undefined}>{note}</p>}
         </form>
         <aside className="studio-card">
           <h2>The studio</h2>
