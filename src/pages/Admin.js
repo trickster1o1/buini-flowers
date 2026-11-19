@@ -619,7 +619,7 @@ function SiteDesk() {
       const next = await call("siteUpdate", { token: token(), ...form });
       invalidateSite();
       setForm(next);
-      setSaved("Saved. The home banner and the contact details are updated.");
+      setSaved("Saved. The home banner, contact details, and social links are updated.");
     } catch (err) {
       const message = err.message === "Unknown request."
         ? "The studio API needs the latest Apps Script deployed before the banner and contact details can be saved."
@@ -652,6 +652,15 @@ function SiteDesk() {
         <label>Email<input type="email" value={form.email} onChange={setField("email")} /></label>
       </div>
       <label>Address<input value={form.address} onChange={setField("address")} /></label>
+      <h2 className="sec-title" style={{ textAlign: "left" }}>Social links</h2>
+      <div className="stack two">
+        <label>Facebook<input value={form.facebook || ""} onChange={setField("facebook")} placeholder="https://" /></label>
+        <label>Instagram<input value={form.instagram || ""} onChange={setField("instagram")} placeholder="https://" /></label>
+      </div>
+      <div className="stack two">
+        <label>X<input value={form.x || ""} onChange={setField("x")} placeholder="https://" /></label>
+        <label>YouTube<input value={form.youtube || ""} onChange={setField("youtube")} placeholder="https://" /></label>
+      </div>
       <button type="submit" disabled={saving}>{saving ? "Saving" : "Save site"}</button>
       {saved && <p className="quiet">{saved}</p>}
       {error && <p className="error">{error}</p>}

@@ -407,6 +407,13 @@ function imageLink(value, label) {
   return src;
 }
 
+function socialLink(value, label) {
+  const src = String(value || "").trim();
+  if (!src) return "";
+  if (!/^https?:\/\//i.test(src)) throw new Error(`${label} should start with http.`);
+  return src;
+}
+
 export function normalizeSite(payload) {
   const bannerTitle = String(payload.bannerTitle || "").trim();
   const bannerButton = String(payload.bannerButton || "").trim();
@@ -429,6 +436,10 @@ export function normalizeSite(payload) {
     phone,
     email,
     address,
+    facebook: socialLink(payload.facebook, "The Facebook link"),
+    instagram: socialLink(payload.instagram, "The Instagram link"),
+    x: socialLink(payload.x, "The X link"),
+    youtube: socialLink(payload.youtube, "The YouTube link"),
   };
 }
 

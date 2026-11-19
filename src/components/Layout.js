@@ -225,15 +225,17 @@ export default function Layout() {
           </div>
         </div>
         <div className="wrap footer-base">
-          <div className="pays" aria-label="Payment methods">
-            {["Visa", "Mastercard", "Amex", "Pay"].map((name) => <span key={name}>{name}</span>)}
-          </div>
+          <div />
           <p>© {new Date().getFullYear()} BUINI. All Rights Reserved.</p>
           <div className="socials">
-            <a href="#social" aria-label="Facebook" onClick={(event) => event.preventDefault()}><SocialIcon name="facebook" /></a>
-            <a href="#social" aria-label="Instagram" onClick={(event) => event.preventDefault()}><SocialIcon name="instagram" /></a>
-            <a href="#social" aria-label="X" onClick={(event) => event.preventDefault()}><SocialIcon name="x" /></a>
-            <a href="#social" aria-label="YouTube" onClick={(event) => event.preventDefault()}><SocialIcon name="youtube" /></a>
+            {[
+              ["facebook", "Facebook", site.facebook],
+              ["instagram", "Instagram", site.instagram],
+              ["x", "X", site.x],
+              ["youtube", "YouTube", site.youtube],
+            ].filter(([, , href]) => href).map(([name, label, href]) => (
+              <a key={name} href={href} aria-label={label} target="_blank" rel="noreferrer"><SocialIcon name={name} /></a>
+            ))}
           </div>
         </div>
       </footer>

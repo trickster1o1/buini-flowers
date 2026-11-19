@@ -1,28 +1,11 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { SHIPPING, money } from "../data/catalog";
+import { money } from "../data/catalog";
 import { useShop } from "../context/ShopContext";
 import useTitle from "../components/useTitle";
 
 export default function Cart() {
   useTitle("Cart");
-  const { cart, updateQty, removeLine, subtotal, discount, coupon, applyCoupon, clearCoupon, shipping, setShipping } = useShop();
-  const [code, setCode] = useState("");
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const shippingCost = SHIPPING[shipping].cost;
-  const total = Math.max(0, subtotal - discount) + shippingCost;
-
-  async function submitCoupon(event) {
-    event.preventDefault();
-    try {
-      await applyCoupon(code);
-      setMessage("");
-      setCode("");
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
+  const { cart, updateQty, removeLine, subtotal } = useShop();
 
   return (
     <div className="wrap page">
@@ -57,28 +40,7 @@ export default function Cart() {
             ))}
           </div>
           <aside className="summary">
-            <h2>Coupon code <button className="icon-btn" type="button" aria-label="Toggle coupon" onClick={() => setOpen((value) => !value)}>+</button></h2>
-            {open && (
-              <form className="coupon-box" onSubmit={submitCoupon}>
-                <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="BLOOM10" aria-label="Coupon code" />
-                <button type="submit">Apply</button>
-              </form>
-            )}
-            {coupon && <p className="quiet">{coupon.code} · {coupon.label} <button className="remove" type="button" onClick={clearCoupon}>Remove</button></p>}
-            {message && <p className="error">{message}</p>}
-            <div className="sum-row"><span>Subtotal</span><strong>{money(subtotal)}</strong></div>
-            <div className="sum-row" style={{ display: "block" }}>
-              <span>Shipment</span>
-              {Object.values(SHIPPING).map((option) => (
-                <label className="ship-choice" key={option.id}>
-                  <span><input type="radio" name="ship" checked={shipping === option.id} onChange={() => setShipping(option.id)} /> {option.label}</span>
-                  <span>{option.cost === 0 ? "Free" : money(option.cost)}</span>
-                </label>
-              ))}
-            </div>
-            {discount > 0 && <div className="sum-row"><span>Discount</span><strong>–{money(discount)}</strong></div>}
-            <div className="sum-row"><span>Shipping to</span><span>Kathmandu</span></div>
-            <div className="sum-row total-row"><span>Total</span><strong>{money(total)}</strong></div>
+            <div className="sum-row total-row"><span>Total</span><strong>{money(subtotal)}</strong></div>
             <Link className="btn checkout" to="/checkout">Checkout</Link>
           </aside>
         </div>

@@ -19,6 +19,10 @@ export const SITE = {
   phone: STUDIO.phone,
   email: STUDIO.email,
   address: STUDIO.address,
+  facebook: "",
+  instagram: "",
+  x: "",
+  youtube: "",
 };
 
 export const ADMIN_EMAIL = "studio@buini.test";
@@ -401,7 +405,7 @@ export const categories = [
 export const coupons = [
   { code: "BLOOM10", type: "percent", amount: 10, label: "10% off the first studio order" },
   { code: "STUDIO20", type: "percent", amount: 20, label: "20% studio courtesy" },
-  { code: "WELCOME15", type: "amount", amount: 15, label: "$15 off" },
+  { code: "WELCOME15", type: "amount", amount: 15, label: "Rs. 15 off" },
 ];
 
 export const posts = [
@@ -479,7 +483,7 @@ export const pages = {
     title: "Shipping",
     kicker: "Delivery",
     paragraphs: [
-      "Flat-rate delivery inside Kathmandu is $12 and arrives the next day when the order is placed before 1pm. After 1pm, we move it to the following morning.",
+      "Flat-rate delivery inside Kathmandu is Rs. 12 and arrives the next day when the order is placed before 1pm. After 1pm, we move it to the following morning.",
       "Local pickup from the Thamel studio is free. We will write when the bunch is wrapped and ready at the bench.",
       "We do not ship fresh flowers by air. Dried domes and wreaths can travel; write to the studio with the address before you order one.",
       "Someone should be there to put the stems in water. If a doorman or a neighbor will receive them, say so in the order note.",
@@ -540,7 +544,7 @@ export const pages = {
 export const occasions = ["Just because", "Birthday", "Anniversary", "Wedding", "Sympathy", "Thank you", "Dinner"];
 
 export function money(value) {
-  return `$${Number(value || 0).toLocaleString("en-US", {
+  return `Rs. ${Number(value || 0).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

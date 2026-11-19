@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import emailjs from "@emailjs/browser";
 import rose from "../rose.jpg";
 import { call } from "../api/client";
+import { sendStudioMail } from "../api/mail";
 import { DEMO_CUSTOMER, formatDate, money, posts } from "../data/catalog";
 import useSite from "../components/useSite";
 import { useShop } from "../context/ShopContext";
@@ -45,10 +45,6 @@ export function BlogPost() {
   );
 }
 
-const MAIL_SERVICE = "service_t52cepr";
-const MAIL_TEMPLATE = "template_tt7sqi7";
-const MAIL_PUBLIC_KEY = "oDYDzwYQrLY_-YViZ";
-
 export function Contact() {
   useTitle("Contacts");
   const site = useSite();
@@ -63,17 +59,11 @@ export function Contact() {
     setNote("");
     setFailed(false);
     try {
-      await emailjs.send(
-        MAIL_SERVICE,
-        MAIL_TEMPLATE,
-        {
-          name: form.name,
-          email: form.email,
-          message: `Topic: ${form.topic}\n\n${form.message}\n\nFrom: ${form.email}`,
-          reply_to: form.email,
-        },
-        { publicKey: MAIL_PUBLIC_KEY }
-      );
+      await sendStudioMail({
+        name: form.name,
+        email: form.email,
+        message: `Topic: ${form.topic}\n\n${form.message}\n\nFrom: ${form.email}`,
+      });
       try {
         await call("inquiry", form);
       } catch (error) {
@@ -263,8 +253,7 @@ export function OrderDone() {
       <h1>{id}</h1>
       <p>The bench has this order. We confirm by email, then tie it for {order ? formatDate(order.deliveryDate) : "the date you chose"}.</p>
       {order && <p>{order.firstName} {order.lastName} · {money(order.total)} · {order.items.map((item) => item.name).join(", ")}</p>}
-      <p>Payment is taken on delivery or at the studio. You can follow it from your account.</p>
-      <Link className="btn" to="/account">View account</Link>
+      <p>Payment is taken on delivery or at the studio.</p>
     </div>
   );
 }

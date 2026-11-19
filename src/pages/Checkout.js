@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { call } from "../api/client";
+import { sendStudioMail } from "../api/mail";
 import { SHIPPING, money, occasions } from "../data/catalog";
 import { useShop } from "../context/ShopContext";
 import useTitle from "../components/useTitle";
@@ -18,6 +19,38 @@ const empty = {
   deliveryDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
 };
 
+function writtenDate(value) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  if (!year || !month || !day) return value || "";
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function orderMessage(order, form, cart, summary) {
+  const ship = SHIPPING[summary.shipping];
+  const lines = [
+    `Order ${order.id}`,
+    "",
+    ...cart.map((line) => `${line.name}${line.color ? ` (${line.color})` : ""} × ${line.qty} — ${money(line.unitPrice * line.qty)}`),
+    `${ship ? ship.label : "Shipping"} — ${summary.shippingCost === 0 ? "Free" : money(summary.shippingCost)}`,
+  ];
+  if (summary.discount > 0) lines.push(`${summary.coupon?.code || "Discount"} — –${money(summary.discount)}`);
+  lines.push(
+    `Total — ${money(summary.total)}`,
+    "",
+    `First name: ${form.firstName}`,
+    `Last name: ${form.lastName}`,
+    `Email: ${form.email}`,
+    `Phone: ${form.phone}`,
+    `Address: ${form.address}`,
+    `City: ${form.city}`,
+    `Region: ${form.region}`,
+    `Occasion: ${form.occasion}`,
+    `Delivery date: ${writtenDate(form.deliveryDate)}`,
+    `Card note: ${form.note || "—"}`
+  );
+  return lines.join("\n");
+}
+
 export default function Checkout() {
   useTitle("Checkout");
   const navigate = useNavigate();
@@ -25,6 +58,7 @@ export default function Checkout() {
   const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const placed = useRef(null);
   const shippingCost = SHIPPING[shipping].cost;
   const total = Math.max(0, subtotal - discount) + shippingCost;
 
@@ -37,7 +71,7 @@ export default function Checkout() {
     setBusy(true);
     setError("");
     try {
-      const order = await call("order", {
+      const order = placed.current || await call("order", {
         ...form,
         shipping,
         coupon: coupon?.code || "",
@@ -47,11 +81,17 @@ export default function Checkout() {
         total,
         items: cart.map(({ key, ...item }) => item),
       });
+      placed.current = order;
+      await sendStudioMail({
+        name: `${form.firstName} ${form.lastName}`.trim(),
+        email: form.email,
+        message: orderMessage(order, form, cart, { shipping, shippingCost, discount, coupon, total }),
+      });
       sessionStorage.setItem("buini_last_order", JSON.stringify(order));
       clearCart();
       navigate(`/order/${order.id}`);
     } catch (err) {
-      setError(err.message);
+      setError(err.text || err.message || "The order email could not be sent.");
       setBusy(false);
     }
   }

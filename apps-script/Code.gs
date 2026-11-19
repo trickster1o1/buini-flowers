@@ -30,7 +30,7 @@ var HEADERS = {
   Subscribers: ["email", "createdAt"],
   Reviews: ["id", "productId", "author", "rating", "title", "body", "createdAt"],
   Coupons: ["code", "type", "amount", "label"],
-  Settings: ["id", "bannerTitle", "bannerImage", "bannerButton", "bannerLink", "bannerSideA", "bannerSideB", "hours", "phone", "email", "address"]
+  Settings: ["id", "bannerTitle", "bannerImage", "bannerButton", "bannerLink", "bannerSideA", "bannerSideB", "hours", "phone", "email", "address", "facebook", "instagram", "x", "youtube"]
 };
 
 var SOFT = "Blush:#e7b7b0|Ivory:#f3efe6|Sage:#9aab84|Kraft:#c4a574";
@@ -150,10 +150,20 @@ function ensure() {
   var products = ss.getSheetByName("Products");
   if (products.getLastRow() < 2) seed(ss);
   var settings = ss.getSheetByName("Settings");
+  syncHeaders(settings, "Settings");
   if (settings.getLastRow() < 2) writeSheet(ss, "Settings", [defaultSite()]);
   var def = ss.getSheetByName("Sheet1");
   if (def && ss.getSheets().length > 1) ss.deleteSheet(def);
   return ss;
+}
+
+function syncHeaders(sheet, name) {
+  var wanted = HEADERS[name];
+  var width = Math.max(sheet.getLastColumn(), 1);
+  var current = sheet.getRange(1, 1, 1, width).getValues()[0].filter(function (header) { return header !== "" && header !== null; });
+  var missing = wanted.filter(function (header) { return current.indexOf(header) < 0; });
+  if (!missing.length) return;
+  sheet.getRange(1, current.length + 1, 1, missing.length).setValues([missing]);
 }
 
 function writeSheet(ss, name, objects) {
@@ -175,7 +185,7 @@ function seed(ss) {
   writeSheet(ss, "Coupons", [
     { code: "BLOOM10", type: "percent", amount: 10, label: "10% off the first studio order" },
     { code: "STUDIO20", type: "percent", amount: 20, label: "20% studio courtesy" },
-    { code: "WELCOME15", type: "amount", amount: 15, label: "$15 off" }
+    { code: "WELCOME15", type: "amount", amount: 15, label: "Rs. 15 off" }
   ]);
   writeSheet(ss, "Reviews", [
     { id: "r1", productId: "p01", author: "Mira C.", rating: 5, title: "Soft and full", body: "It looked exactly like the photograph and lasted six days on the dining table.", createdAt: "2026-11-02" },
@@ -521,13 +531,24 @@ function defaultSite() {
     hours: "Monday – Saturday: 9:00–6:00",
     phone: "+977 1-454-0190",
     email: "hello@buini.studio",
-    address: "Thamel Marg, Kathmandu 44600"
+    address: "Thamel Marg, Kathmandu 44600",
+    facebook: "",
+    instagram: "",
+    x: "",
+    youtube: ""
   };
 }
 
 function siteImage(value, label) {
   var src = String(value || "").trim();
   if (src.indexOf("http") !== 0 && src.indexOf("/") !== 0) throw new Error(label + " needs a full image link.");
+  return src;
+}
+
+function socialLink(value, label) {
+  var src = String(value || "").trim();
+  if (!src) return "";
+  if (src.indexOf("http") !== 0) throw new Error(label + " should start with http.");
   return src;
 }
 
@@ -552,7 +573,11 @@ function siteFields(payload) {
     hours: hours,
     phone: phone,
     email: email,
-    address: address
+    address: address,
+    facebook: socialLink(payload.facebook, "The Facebook link"),
+    instagram: socialLink(payload.instagram, "The Instagram link"),
+    x: socialLink(payload.x, "The X link"),
+    youtube: socialLink(payload.youtube, "The YouTube link")
   };
 }
 
