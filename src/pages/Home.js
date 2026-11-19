@@ -3,6 +3,7 @@ import { posts } from "../data/catalog";
 import { Mark } from "../components/Icons";
 import ProductCard from "../components/ProductCard";
 import useProducts from "../components/useProducts";
+import useSite from "../components/useSite";
 import useTitle from "../components/useTitle";
 
 const mosaic = [
@@ -23,24 +24,29 @@ const insta = [
 
 export default function Home() {
   useTitle("");
+  const site = useSite();
   const { items, loading, error } = useProducts();
+  const titleLines = String(site.bannerTitle || "").split("\n");
+  const bannerExternal = /^https?:\/\//i.test(site.bannerLink || "");
   const edit = items.filter((product) => product.trending).slice(0, 4);
 
   return (
     <div>
       <section className="hero">
         <div className="hero-main">
-          <img src="https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=1400&q=80" alt="A hand-tied winter bouquet" />
+          <img src={site.bannerImage} alt="" />
         </div>
         <div className="hero-col">
           <div className="hero-copy">
             <Mark />
-            <h1>New Winter<br />Collection 2026</h1>
-            <Link className="btn" to="/shop">Shop now</Link>
+            <h1>{titleLines.map((line, index) => <span key={`${line}-${index}`}>{line}{index < titleLines.length - 1 && <br />}</span>)}</h1>
+            {bannerExternal
+              ? <a className="btn" href={site.bannerLink}>{site.bannerButton}</a>
+              : <Link className="btn" to={site.bannerLink || "/shop"}>{site.bannerButton}</Link>}
           </div>
           <div className="hero-pair">
-            <img src="https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80" alt="Garden roses wrapped in paper" />
-            <img src="https://images.unsplash.com/photo-1468327768560-75b778cbb551?auto=format&fit=crop&w=800&q=80" alt="Pink tulips" />
+            <img src={site.bannerSideA} alt="" />
+            <img src={site.bannerSideB} alt="" />
           </div>
         </div>
       </section>

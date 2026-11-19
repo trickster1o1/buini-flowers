@@ -9,6 +9,7 @@ import {
   productReviews,
   products as catalogProducts,
   seedCrm,
+  SITE,
 } from "../data/catalog";
 
 const KEY = "buini_crm_v1";
@@ -350,6 +351,14 @@ function localCall(action, payload) {
     }
     case "subscribers":
       return pageResult(crm.subscribers, payload);
+    case "site":
+      return { ...SITE, ...(crm.site || {}) };
+    case "siteUpdate": {
+      const site = normalizeSite(payload);
+      crm.site = site;
+      writeCrm(crm);
+      return site;
+    }
     case "account": {
       const email = String(payload.email || "").trim().toLowerCase();
       return crm.orders.filter((order) => order.email === email);
@@ -388,6 +397,69 @@ export async function call(action, payload = {}) {
 
 let productCache = null;
 let productPromise = null;
+let siteCache = null;
+let sitePromise = null;
+const siteListeners = new Set();
+
+function imageLink(value, label) {
+  const src = String(value || "").trim();
+  if (!/^https?:\/\//i.test(src) && !src.startsWith("/")) throw new Error(`${label} needs a full image link.`);
+  return src;
+}
+
+export function normalizeSite(payload) {
+  const bannerTitle = String(payload.bannerTitle || "").trim();
+  const bannerButton = String(payload.bannerButton || "").trim();
+  const bannerLink = String(payload.bannerLink || "").trim();
+  const hours = String(payload.hours || "").trim();
+  const phone = String(payload.phone || "").trim();
+  const email = String(payload.email || "").trim();
+  const address = String(payload.address || "").trim();
+  if (!bannerTitle) throw new Error("Add a banner title.");
+  if (!bannerButton) throw new Error("Add the banner button label.");
+  if (!bannerLink.startsWith("/") && !/^https?:\/\//i.test(bannerLink)) throw new Error("The banner button link should start with / or http.");
+  return {
+    bannerTitle,
+    bannerImage: imageLink(payload.bannerImage, "The banner photo"),
+    bannerButton,
+    bannerLink,
+    bannerSideA: imageLink(payload.bannerSideA, "The left photo"),
+    bannerSideB: imageLink(payload.bannerSideB, "The right photo"),
+    hours,
+    phone,
+    email,
+    address,
+  };
+}
+
+export function subscribeSite(listener) {
+  siteListeners.add(listener);
+  return () => siteListeners.delete(listener);
+}
+
+export function invalidateSite() {
+  siteCache = null;
+  sitePromise = null;
+  siteListeners.forEach((listener) => listener());
+}
+
+export function loadSite() {
+  if (siteCache) return Promise.resolve(siteCache);
+  if (sitePromise) return sitePromise;
+  sitePromise = call("site")
+    .then((data) => {
+      siteCache = { ...SITE, ...data };
+      return siteCache;
+    })
+    .catch(() => {
+      siteCache = { ...SITE };
+      return siteCache;
+    })
+    .finally(() => {
+      sitePromise = null;
+    });
+  return sitePromise;
+}
 
 export function invalidateProducts() {
   productCache = null;

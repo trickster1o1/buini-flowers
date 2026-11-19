@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import rose from "../rose.jpg";
-import { call, invalidateProducts, isRemote } from "../api/client";
+import { call, invalidateProducts, invalidateSite, isRemote, loadSite } from "../api/client";
 import { ADMIN_EMAIL, ADMIN_PASSWORD, categories, formatDate, money } from "../data/catalog";
 import useTitle from "../components/useTitle";
 
@@ -13,6 +13,7 @@ const VIEWS = [
   ["inventory", "Inventory"],
   ["inquiries", "Inquiries"],
   ["subscribers", "Subscribers"],
+  ["site", "Site"],
 ];
 
 function token() {
@@ -99,17 +100,16 @@ export default function Admin() {
 
   return (
     <div className="wrap page">
-      <div className="admin-tools">
-        <h1 className="page-title" style={{ margin: 0 }}>Studio desk</h1>
-        <button className="ghost" type="button" onClick={logout}>Sign out</button>
-      </div>
       <div className="admin">
         <nav className="admin-nav">
-          {VIEWS.map(([id, label]) => (
-            <NavLink key={label} to={id ? `/flowerlog/${id}` : "/flowerlog"} end={!id} className={current === (id || "dashboard") ? "on" : ""}>
-              {label}
-            </NavLink>
-          ))}
+          <div className="admin-links">
+            {VIEWS.map(([id, label]) => (
+              <NavLink key={label} to={id ? `/flowerlog/${id}` : "/flowerlog"} end={!id} className={current === (id || "dashboard") ? "on" : ""}>
+                {label}
+              </NavLink>
+            ))}
+          </div>
+          <button className="ghost" type="button" onClick={logout}>Sign out</button>
         </nav>
         <Desk key={current} view={current} />
       </div>
@@ -125,6 +125,7 @@ function Desk({ view }) {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
+    if (view === "site") return undefined;
     let live = true;
     setData(null);
     setError("");
@@ -177,6 +178,8 @@ function Desk({ view }) {
     await call("reset", { token: token() });
     refresh();
   }
+
+  if (view === "site") return <SiteDesk />;
 
   const listView = view !== "dashboard";
   if (error) return <p className="error">{error}</p>;
@@ -581,5 +584,77 @@ function InventoryDesk({ rows, page, pages, total, onPage, onAdded, onSaved }) {
         </div>
       )}
     </div>
+  );
+}
+
+function SiteDesk() {
+  const [form, setForm] = useState(null);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    loadSite().then((site) => {
+      if (live) setForm(site);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  function setField(field) {
+    return (event) => {
+      setSaved("");
+      setForm((current) => ({ ...current, [field]: event.target.value }));
+    };
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setSaved("");
+    try {
+      const next = await call("siteUpdate", { token: token(), ...form });
+      invalidateSite();
+      setForm(next);
+      setSaved("Saved. The home banner and the contact details are updated.");
+    } catch (err) {
+      const message = err.message === "Unknown request."
+        ? "The studio API needs the latest Apps Script deployed before the banner and contact details can be saved."
+        : err.message;
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!form) return <DeskLoader />;
+
+  return (
+    <form className="stack piece-form" onSubmit={submit}>
+      <h2 className="sec-title" style={{ textAlign: "left" }}>Home banner</h2>
+      <label>Title<textarea rows="2" value={form.bannerTitle} onChange={setField("bannerTitle")} placeholder="A new line starts the second line" /></label>
+      <label>Banner photo<input value={form.bannerImage} onChange={setField("bannerImage")} placeholder="https://" /></label>
+      <div className="stack two">
+        <label>Button label<input value={form.bannerButton} onChange={setField("bannerButton")} /></label>
+        <label>Button link<input value={form.bannerLink} onChange={setField("bannerLink")} placeholder="/shop" /></label>
+      </div>
+      <div className="stack two">
+        <label>Left photo<input value={form.bannerSideA} onChange={setField("bannerSideA")} placeholder="https://" /></label>
+        <label>Right photo<input value={form.bannerSideB} onChange={setField("bannerSideB")} placeholder="https://" /></label>
+      </div>
+      <h2 className="sec-title" style={{ textAlign: "left" }}>Contact details</h2>
+      <label>Hours<input value={form.hours} onChange={setField("hours")} /></label>
+      <div className="stack two">
+        <label>Phone<input value={form.phone} onChange={setField("phone")} /></label>
+        <label>Email<input type="email" value={form.email} onChange={setField("email")} /></label>
+      </div>
+      <label>Address<input value={form.address} onChange={setField("address")} /></label>
+      <button type="submit" disabled={saving}>{saving ? "Saving" : "Save site"}</button>
+      {saved && <p className="quiet">{saved}</p>}
+      {error && <p className="error">{error}</p>}
+    </form>
   );
 }

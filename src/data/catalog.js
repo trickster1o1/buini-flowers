@@ -8,6 +8,19 @@ export const STUDIO = {
   hours: "Monday – Saturday: 9:00–6:00",
 };
 
+export const SITE = {
+  bannerTitle: "New Winter\nCollection 2026",
+  bannerImage: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=1400&q=80",
+  bannerButton: "Shop now",
+  bannerLink: "/shop",
+  bannerSideA: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80",
+  bannerSideB: "https://images.unsplash.com/photo-1468327768560-75b778cbb551?auto=format&fit=crop&w=800&q=80",
+  hours: STUDIO.hours,
+  phone: STUDIO.phone,
+  email: STUDIO.email,
+  address: STUDIO.address,
+};
+
 export const ADMIN_EMAIL = "studio@buini.test";
 export const ADMIN_PASSWORD = "atelier";
 export const DEMO_CUSTOMER = "mira@buini.test";

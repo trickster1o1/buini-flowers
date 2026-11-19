@@ -29,7 +29,8 @@ var HEADERS = {
   Inquiries: ["id", "name", "email", "topic", "message", "createdAt", "status"],
   Subscribers: ["email", "createdAt"],
   Reviews: ["id", "productId", "author", "rating", "title", "body", "createdAt"],
-  Coupons: ["code", "type", "amount", "label"]
+  Coupons: ["code", "type", "amount", "label"],
+  Settings: ["id", "bannerTitle", "bannerImage", "bannerButton", "bannerLink", "bannerSideA", "bannerSideB", "hours", "phone", "email", "address"]
 };
 
 var SOFT = "Blush:#e7b7b0|Ivory:#f3efe6|Sage:#9aab84|Kraft:#c4a574";
@@ -148,6 +149,8 @@ function ensure() {
   });
   var products = ss.getSheetByName("Products");
   if (products.getLastRow() < 2) seed(ss);
+  var settings = ss.getSheetByName("Settings");
+  if (settings.getLastRow() < 2) writeSheet(ss, "Settings", [defaultSite()]);
   var def = ss.getSheetByName("Sheet1");
   if (def && ss.getSheets().length > 1) ss.deleteSheet(def);
   return ss;
@@ -506,6 +509,78 @@ function pieceFields(payload, existing) {
   };
 }
 
+function defaultSite() {
+  return {
+    id: "studio",
+    bannerTitle: "New Winter\nCollection 2026",
+    bannerImage: "https://images.unsplash.com/photo-1563241527-3004b7be0ffd?auto=format&fit=crop&w=1400&q=80",
+    bannerButton: "Shop now",
+    bannerLink: "/shop",
+    bannerSideA: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80",
+    bannerSideB: "https://images.unsplash.com/photo-1468327768560-75b778cbb551?auto=format&fit=crop&w=800&q=80",
+    hours: "Monday – Saturday: 9:00–6:00",
+    phone: "+977 1-454-0190",
+    email: "hello@buini.studio",
+    address: "Thamel Marg, Kathmandu 44600"
+  };
+}
+
+function siteImage(value, label) {
+  var src = String(value || "").trim();
+  if (src.indexOf("http") !== 0 && src.indexOf("/") !== 0) throw new Error(label + " needs a full image link.");
+  return src;
+}
+
+function siteFields(payload) {
+  var title = String(payload.bannerTitle || "").trim();
+  var button = String(payload.bannerButton || "").trim();
+  var link = String(payload.bannerLink || "").trim();
+  var hours = String(payload.hours || "").trim();
+  var phone = String(payload.phone || "").trim();
+  var email = String(payload.email || "").trim();
+  var address = String(payload.address || "").trim();
+  if (!title) throw new Error("Add a banner title.");
+  if (!button) throw new Error("Add the banner button label.");
+  if (link.indexOf("/") !== 0 && link.indexOf("http") !== 0) throw new Error("The banner button link should start with / or http.");
+  return {
+    bannerTitle: title,
+    bannerImage: siteImage(payload.bannerImage, "The banner photo"),
+    bannerButton: button,
+    bannerLink: link,
+    bannerSideA: siteImage(payload.bannerSideA, "The left photo"),
+    bannerSideB: siteImage(payload.bannerSideB, "The right photo"),
+    hours: hours,
+    phone: phone,
+    email: email,
+    address: address
+  };
+}
+
+function readSite() {
+  var rows = table("Settings");
+  if (!rows.length) {
+    var fallback = defaultSite();
+    delete fallback.id;
+    return fallback;
+  }
+  var row = rows[0];
+  var site = {};
+  Object.keys(defaultSite()).forEach(function (key) {
+    if (key === "id") return;
+    var value = row[key];
+    site[key] = value === undefined || value === null ? "" : String(value);
+  });
+  return site;
+}
+
+function saveSite(payload) {
+  var site = siteFields(payload);
+  var rows = table("Settings");
+  if (!rows.length) append("Settings", Object.assign({ id: "studio" }, site));
+  else updateRow("Settings", "id", rows[0].id || "studio", site);
+  return readSite();
+}
+
 function handle(action, payload) {
   if (action === "products") {
     return table("Products").map(mapProduct);
@@ -644,6 +719,11 @@ function handle(action, payload) {
     assertAdmin(payload.token);
     updateRow("Inquiries", "id", payload.id, { status: payload.status });
     return { id: payload.id, status: payload.status };
+  }
+  if (action === "site") return readSite();
+  if (action === "siteUpdate") {
+    assertAdmin(payload.token);
+    return saveSite(payload);
   }
   if (action === "subscribers") {
     assertAdmin(payload.token);

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import rose from "../rose.jpg";
 import { call } from "../api/client";
-import { DEMO_CUSTOMER, STUDIO, formatDate, money, posts } from "../data/catalog";
+import { DEMO_CUSTOMER, formatDate, money, posts } from "../data/catalog";
+import useSite from "../components/useSite";
 import { useShop } from "../context/ShopContext";
 import useProducts from "../components/useProducts";
 import useTitle from "../components/useTitle";
@@ -45,6 +46,7 @@ export function BlogPost() {
 
 export function Contact() {
   useTitle("Contacts");
+  const site = useSite();
   const [form, setForm] = useState({ name: "", email: "", topic: "General", message: "" });
   const [note, setNote] = useState("");
 
@@ -79,12 +81,21 @@ export function Contact() {
           <button className="btn" type="submit">Send</button>
           {note && <p>{note}</p>}
         </form>
-        <aside className="summary">
-          <h2>Studio</h2>
-          <p>{STUDIO.hours}</p>
-          <p>{STUDIO.phone}</p>
-          <p>{STUDIO.email}</p>
-          <p>{STUDIO.address}</p>
+        <aside className="studio-card">
+          <h2>The studio</h2>
+          <dl>
+            {[
+              ["Hours", site.hours],
+              ["Phone", site.phone],
+              ["Email", site.email],
+              ["Address", site.address],
+            ].filter(([, value]) => value).map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
         </aside>
       </div>
     </div>

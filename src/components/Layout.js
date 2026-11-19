@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { STUDIO } from "../data/catalog";
+import { money } from "../data/catalog";
 import { call } from "../api/client";
 import { useShop } from "../context/ShopContext";
 import useProducts from "./useProducts";
+import useSite from "./useSite";
 import Icon, { SocialIcon } from "./Icons";
 
 const pageLinks = [
@@ -17,8 +18,9 @@ const pageLinks = [
 ];
 
 export default function Layout() {
-  const { count, toast } = useShop();
+  const { cart, count, subtotal, toast } = useShop();
   const { items } = useProducts();
+  const site = useSite();
   const location = useLocation();
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
@@ -29,6 +31,8 @@ export default function Layout() {
   useEffect(() => {
     setMenu(false);
     setSearch(false);
+    const active = document.activeElement;
+    if (active && active.closest(".cart-hover")) active.blur();
   }, [location.pathname]);
 
   useEffect(() => {
@@ -68,27 +72,12 @@ export default function Layout() {
   return (
     <div className="site">
       <header className="site-header">
-        <div className="promo">
-          <Link to="/shop">Best special offers! 10% off with code Bloom10</Link>
-        </div>
         <div className="bar">
           <button className="icon-btn menu-btn" type="button" aria-label="Open menu" onClick={() => setMenu(true)}>
             <Icon name="menu" />
           </button>
           <Link to="/" className="logo">BUINI</Link>
-          <div className="tools">
-            <Link to="/account" aria-label="Account"><Icon name="user" /></Link>
-            <button type="button" className="icon-btn" aria-label="Search" onClick={() => setSearch(true)}>
-              <Icon name="search" />
-            </button>
-            <Link to="/wishlist" aria-label="Wishlist"><Icon name="heart" /></Link>
-            <Link to="/cart" className="bag" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`}>
-              <Icon name="bag" />
-              {count > 0 && <span className="count">{count}</span>}
-            </Link>
-          </div>
-        </div>
-        <nav className="nav" aria-label="Primary">
+          <nav className="nav" aria-label="Primary">
           <NavLink to="/" end>Home</NavLink>
           <div className="drop">
             <NavLink to="/shop">Shop</NavLink>
@@ -108,29 +97,48 @@ export default function Layout() {
               {pageLinks.map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}
             </div>
           </div>
-          <div className="drop mega-drop">
-            <span className="nav-label">Mega</span>
-            <div className="mega">
-              <div>
-                <p>The edit</p>
-                <Link to="/shop?category=Bouquets">Hand-tied bouquets</Link>
-                <Link to="/shop?category=Seasonal">What is in season</Link>
-                <Link to="/shop?category=Stems">Single stems</Link>
-              </div>
-              <div>
-                <p>Occasions</p>
-                <Link to="/shop?category=Wedding">Weddings</Link>
-                <Link to="/shop?category=Dried">Dried & kept</Link>
-                <Link to="/contact">A custom order</Link>
-              </div>
-              <Link to="/shop?category=Seasonal" className="mega-feature">
-                <img src="https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?auto=format&fit=crop&w=700&q=80" alt="" />
-                <span>Winter collection</span>
+          <NavLink to="/contact">Contacts</NavLink>
+          </nav>
+          <div className="tools">
+            <button type="button" className="icon-btn" aria-label="Search" onClick={() => setSearch(true)}>
+              <Icon name="search" />
+            </button>
+            <div className="cart-hover">
+              <Link to="/cart" className="bag" aria-label={`Cart, ${count} ${count === 1 ? "item" : "items"}`}>
+                <Icon name="bag" />
+                {count > 0 && <span className="count">{count}</span>}
               </Link>
+              <div className="cart-pop">
+                {cart.length === 0 ? (
+                  <p className="cart-pop-empty">Your basket is empty.</p>
+                ) : (
+                  <>
+                    <ul className="cart-pop-lines">
+                      {cart.map((line) => (
+                        <li key={line.key}>
+                          <img src={line.image} alt="" />
+                          <div>
+                            <strong>{line.name}{line.color ? `, ${line.color}` : ""}</strong>
+                            <span className="cart-pop-brand">{line.brand}</span>
+                            <span>{line.qty} × {money(line.unitPrice)}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="cart-pop-total">
+                      <span>Subtotal</span>
+                      <strong>{money(subtotal)}</strong>
+                    </div>
+                    <div className="cart-pop-actions">
+                      <Link to="/cart">View cart</Link>
+                      <Link className="fill" to="/checkout">Checkout</Link>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-          <NavLink to="/contact">Contacts</NavLink>
-        </nav>
+        </div>
       </header>
 
       {menu && (
@@ -142,8 +150,6 @@ export default function Layout() {
           <Link to="/shop" onClick={() => setMenu(false)}>Shop</Link>
           <Link to="/blog" onClick={() => setMenu(false)}>Blog</Link>
           <Link to="/contact" onClick={() => setMenu(false)}>Contacts</Link>
-          <Link to="/wishlist" onClick={() => setMenu(false)}>Wishlist</Link>
-          <Link to="/account" onClick={() => setMenu(false)}>Account</Link>
           {pageLinks.map(([label, href]) => (
             <Link key={href} to={href} onClick={() => setMenu(false)}>{label}</Link>
           ))}
@@ -212,10 +218,10 @@ export default function Layout() {
           </div>
           <div>
             <p>If you have any questions regarding your order, products or our service, please contact our customer service.</p>
-            <p><strong>Hours</strong> {STUDIO.hours}</p>
-            <p><strong>Phone</strong> {STUDIO.phone}</p>
-            <p><strong>Email</strong> {STUDIO.email}</p>
-            <p><strong>Address</strong> {STUDIO.address}</p>
+            {site.hours ? <p><strong>Hours</strong> {site.hours}</p> : null}
+            {site.phone ? <p><strong>Phone</strong> {site.phone}</p> : null}
+            {site.email ? <p><strong>Email</strong> {site.email}</p> : null}
+            {site.address ? <p><strong>Address</strong> {site.address}</p> : null}
           </div>
         </div>
         <div className="wrap footer-base">
@@ -229,9 +235,6 @@ export default function Layout() {
             <a href="#social" aria-label="X" onClick={(event) => event.preventDefault()}><SocialIcon name="x" /></a>
             <a href="#social" aria-label="YouTube" onClick={(event) => event.preventDefault()}><SocialIcon name="youtube" /></a>
           </div>
-        </div>
-        <div className="wrap footer-studio">
-          <Link to="/flowerlog">Studio desk</Link>
         </div>
       </footer>
       {toast && <div className="toast" role="status">{toast}</div>}
