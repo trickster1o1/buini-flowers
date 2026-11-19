@@ -87,6 +87,21 @@ function upsertCustomer(crm, order) {
   });
 }
 
+function pageResult(list, payload) {
+  const pageSize = Math.min(50, Math.max(1, Math.floor(Number(payload.pageSize) || 8)));
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total / pageSize) || 1);
+  const page = Math.min(pages, Math.max(1, Math.floor(Number(payload.page) || 1)));
+  const start = (page - 1) * pageSize;
+  return {
+    items: list.slice(start, start + pageSize),
+    page,
+    pageSize,
+    pages,
+    total,
+  };
+}
+
 function dashboardFrom(crm) {
   const active = crm.orders.filter((order) => order.status !== "Cancelled");
   const revenue = moneyRound(active.reduce((sum, order) => sum + Number(order.total || 0), 0));
@@ -192,7 +207,7 @@ function localCall(action, payload) {
     case "dashboard":
       return dashboardFrom(crm);
     case "orders":
-      return crm.orders;
+      return pageResult(crm.orders, payload);
     case "orderUpdate": {
       const order = crm.orders.find((item) => item.id === payload.id);
       if (!order) throw new Error("Order not found.");
@@ -201,9 +216,9 @@ function localCall(action, payload) {
       return order;
     }
     case "customers":
-      return crm.customers;
+      return pageResult(crm.customers, payload);
     case "inventory":
-      return stocked();
+      return pageResult(stocked(), payload);
     case "stock": {
       const next = Math.max(0, Number(payload.stock) || 0);
       crm.stock[payload.id] = next;
@@ -211,7 +226,7 @@ function localCall(action, payload) {
       return { id: payload.id, stock: next };
     }
     case "inquiries":
-      return crm.inquiries;
+      return pageResult(crm.inquiries, payload);
     case "inquiryUpdate": {
       const inquiry = crm.inquiries.find((item) => item.id === payload.id);
       if (!inquiry) throw new Error("Message not found.");
@@ -220,7 +235,7 @@ function localCall(action, payload) {
       return inquiry;
     }
     case "subscribers":
-      return crm.subscribers;
+      return pageResult(crm.subscribers, payload);
     case "account": {
       const email = String(payload.email || "").trim().toLowerCase();
       return crm.orders.filter((order) => order.email === email);
@@ -251,6 +266,9 @@ export async function call(action, payload = {}) {
     throw new Error("The studio API did not return JSON. Check the Apps Script deployment.");
   }
   if (!json.ok) throw new Error(json.error || "The studio API could not complete that.");
+  if (Array.isArray(json.data) && ["orders", "customers", "inventory", "inquiries", "subscribers"].includes(action)) {
+    return pageResult(json.data, payload);
+  }
   return json.data;
 }
 

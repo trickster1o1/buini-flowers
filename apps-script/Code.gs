@@ -15,6 +15,11 @@
  * in the Google Drive of the account that deployed the script.
  * Desk login: studio@buini.test / atelier
  * Change those in Script properties ADMIN_EMAIL and ADMIN_PASSWORD.
+ *
+ * Orders, customers, inventory, inquiries, and subscribers take
+ * page and pageSize and return one page: { items, page, pageSize, pages, total }.
+ * Redeploy the web app (Deploy > Manage deployments > edit > new version)
+ * after changing this file, or the desk keeps the previous version.
  */
 
 var HEADERS = {
@@ -365,6 +370,69 @@ function newestOrders() {
   return table("Orders").map(mapOrder).reverse();
 }
 
+function clampPageSize(value) {
+  var size = Math.floor(Number(value) || 8);
+  if (size < 1) size = 8;
+  if (size > 50) size = 50;
+  return size;
+}
+
+function pageWindow(total, page, pageSize, newestFirst, lastRow) {
+  var pages = Math.max(1, Math.ceil(total / pageSize));
+  var safe = Math.min(Math.max(1, Math.floor(Number(page) || 1)), pages);
+  if (!total) return { page: 1, pages: 1, startRow: 2, endRow: 1 };
+  var startRow;
+  var endRow;
+  if (newestFirst) {
+    endRow = lastRow - (safe - 1) * pageSize;
+    startRow = Math.max(2, endRow - pageSize + 1);
+  } else {
+    startRow = 2 + (safe - 1) * pageSize;
+    endRow = Math.min(lastRow, startRow + pageSize - 1);
+  }
+  return { page: safe, pages: pages, startRow: startRow, endRow: endRow };
+}
+
+function readObjects(sheet, startRow, endRow) {
+  if (endRow < startRow) return [];
+  var width = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, width).getValues()[0];
+  var values = sheet.getRange(startRow, 1, endRow - startRow + 1, width).getValues();
+  return values.filter(function (row) {
+    return row[0] !== "" && row[0] !== null;
+  }).map(function (row) {
+    var obj = {};
+    headers.forEach(function (header, index) { obj[header] = row[index]; });
+    return obj;
+  });
+}
+
+function pagedSheet(name, payload, mapRow, newestFirst) {
+  var sheet = ensure().getSheetByName(name);
+  var lastRow = sheet.getLastRow();
+  var total = Math.max(0, lastRow - 1);
+  var pageSize = clampPageSize(payload.pageSize);
+  var span = pageWindow(total, payload.page, pageSize, newestFirst, lastRow);
+  var rows = readObjects(sheet, span.startRow, span.endRow);
+  if (newestFirst) rows.reverse();
+  return {
+    items: rows.map(mapRow),
+    page: span.page,
+    pageSize: pageSize,
+    pages: span.pages,
+    total: total
+  };
+}
+
+function columnValues(sheet, header) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  var headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  var col = headers.indexOf(header);
+  if (col < 0) return [];
+  return sheet.getRange(2, col + 1, lastRow - 1, 1).getValues();
+}
+
 function handle(action, payload) {
   if (action === "products") {
     return table("Products").map(mapProduct);
@@ -414,25 +482,38 @@ function handle(action, payload) {
   }
   if (action === "dashboard") {
     assertAdmin(payload.token);
-    var orders = newestOrders();
-    var active = orders.filter(function (order) { return order.status !== "Cancelled"; });
+    var ss = ensure();
+    var orderSheet = ss.getSheetByName("Orders");
+    var orderCount = Math.max(0, orderSheet.getLastRow() - 1);
+    var revenue = 0;
+    var openOrders = 0;
+    if (orderCount) {
+      var totals = columnValues(orderSheet, "total");
+      var statuses = columnValues(orderSheet, "status");
+      for (var i = 0; i < orderCount; i++) {
+        var status = statuses[i] ? statuses[i][0] : "";
+        if (status !== "Cancelled") revenue += Number(totals[i] ? totals[i][0] : 0) || 0;
+        if (status !== "Delivered" && status !== "Cancelled") openOrders++;
+      }
+    }
+    var inquiryStatuses = columnValues(ss.getSheetByName("Inquiries"), "status");
     var products = table("Products").map(mapProduct);
     return {
-      revenue: round2(active.reduce(function (sum, order) { return sum + order.total; }, 0)),
-      orders: orders.length,
-      openOrders: orders.filter(function (order) { return order.status !== "Delivered" && order.status !== "Cancelled"; }).length,
-      inquiries: table("Inquiries").filter(function (row) { return row.status === "New"; }).length,
-      subscribers: table("Subscribers").length,
-      customers: table("Customers").length,
+      revenue: round2(revenue),
+      orders: orderCount,
+      openOrders: openOrders,
+      inquiries: inquiryStatuses.filter(function (row) { return row[0] === "New"; }).length,
+      subscribers: Math.max(0, ss.getSheetByName("Subscribers").getLastRow() - 1),
+      customers: Math.max(0, ss.getSheetByName("Customers").getLastRow() - 1),
       lowStock: products.filter(function (product) { return product.stock <= 3; }),
-      recent: orders.slice(0, 5),
+      recent: pagedSheet("Orders", { page: 1, pageSize: 5 }, mapOrder, true).items,
       mode: "sheet",
-      sheetUrl: ensure().getUrl()
+      sheetUrl: ss.getUrl()
     };
   }
   if (action === "orders") {
     assertAdmin(payload.token);
-    return newestOrders();
+    return pagedSheet("Orders", payload, mapOrder, true);
   }
   if (action === "orderUpdate") {
     assertAdmin(payload.token);
@@ -441,13 +522,13 @@ function handle(action, payload) {
   }
   if (action === "customers") {
     assertAdmin(payload.token);
-    return table("Customers").map(function (row) {
+    return pagedSheet("Customers", payload, function (row) {
       return { email: String(row.email).toLowerCase(), firstName: row.firstName, lastName: row.lastName, phone: row.phone, orders: Number(row.orders) || 0, spent: Number(row.spent) || 0, createdAt: row.createdAt };
-    });
+    }, false);
   }
   if (action === "inventory") {
     assertAdmin(payload.token);
-    return table("Products").map(mapProduct);
+    return pagedSheet("Products", payload, mapProduct, false);
   }
   if (action === "stock") {
     assertAdmin(payload.token);
@@ -462,9 +543,9 @@ function handle(action, payload) {
   }
   if (action === "inquiries") {
     assertAdmin(payload.token);
-    return table("Inquiries").map(function (row) {
+    return pagedSheet("Inquiries", payload, function (row) {
       return { id: String(row.id), name: row.name, email: row.email, topic: row.topic, message: row.message, createdAt: row.createdAt, status: row.status };
-    }).reverse();
+    }, true);
   }
   if (action === "inquiryUpdate") {
     assertAdmin(payload.token);
@@ -473,9 +554,9 @@ function handle(action, payload) {
   }
   if (action === "subscribers") {
     assertAdmin(payload.token);
-    return table("Subscribers").map(function (row) {
+    return pagedSheet("Subscribers", payload, function (row) {
       return { email: String(row.email).toLowerCase(), createdAt: row.createdAt };
-    });
+    }, false);
   }
   if (action === "account") {
     var who = String(payload.email || "").trim().toLowerCase();
@@ -535,9 +616,10 @@ function placeOrder(payload) {
     }
     var shippingCost = payload.shipping === "pickup" ? 0 : 12;
     var total = round2(Math.max(0, subtotal - discount) + shippingCost);
-    var orders = table("Orders");
-    var maxId = orders.reduce(function (max, row) {
-      var num = Number(String(row.id).replace(/\D/g, ""));
+    var orderSheet = ensure().getSheetByName("Orders");
+    var orderIds = columnValues(orderSheet, "id");
+    var maxId = orderIds.reduce(function (max, row) {
+      var num = Number(String(row[0]).replace(/\D/g, ""));
       return Math.max(max, isNaN(num) ? 0 : num);
     }, 1042);
     var order = {

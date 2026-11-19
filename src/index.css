@@ -397,6 +397,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   background: #fff;
 }
 .pager button.on { background: #111; color: #fff; }
+.pager button:disabled { opacity: 0.35; }
 .showing { text-align: center; color: var(--muted); margin-top: 14px; font-size: 12px; letter-spacing: 0.08em; }
 
 .pdp { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 48px; align-items: start; }
@@ -505,7 +506,8 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .about-grid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #fff; }
 .error { color: var(--sale); }
 
-.admin { display: grid; grid-template-columns: 210px 1fr; gap: 32px; }
+.admin { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 32px; }
+.admin > * { min-width: 0; }
 .admin-nav { display: grid; align-content: start; gap: 4px; border-right: 1px solid var(--line); padding-right: 18px; }
 .admin-nav a { padding: 8px 0; letter-spacing: 0.14em; text-transform: uppercase; font-size: 12px; color: #777; }
 .admin-nav a.on { color: #111; }

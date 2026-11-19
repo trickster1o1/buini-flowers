@@ -27,6 +27,31 @@ function DeskLoader() {
   );
 }
 
+const PAGE_SIZE = 8;
+
+function Pager({ page, pages, total, onPage }) {
+  if (total === 0) return <p className="showing">No records yet</p>;
+  const from = (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(page * PAGE_SIZE, total);
+  const windowStart = Math.max(1, Math.min(page - 2, pages - 4));
+  const numbers = [];
+  for (let n = windowStart; n <= Math.min(pages, windowStart + 4); n += 1) numbers.push(n);
+  return (
+    <div>
+      <p className="showing">Showing {from}–{to} of {total}</p>
+      {pages > 1 && (
+        <div className="pager">
+          <button type="button" onClick={() => onPage(page - 1)} disabled={page === 1} aria-label="Previous page">‹</button>
+          {numbers.map((n) => (
+            <button key={n} type="button" className={n === page ? "on" : ""} onClick={() => onPage(n)}>{n}</button>
+          ))}
+          <button type="button" onClick={() => onPage(page + 1)} disabled={page === pages} aria-label="Next page">›</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Admin() {
   useTitle("Studio desk");
   const [session, setSession] = useState(token);
@@ -86,7 +111,7 @@ export default function Admin() {
             </NavLink>
           ))}
         </nav>
-        <Desk view={current} />
+        <Desk key={current} view={current} />
       </div>
     </div>
   );
@@ -97,30 +122,32 @@ function Desk({ view }) {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
   const [revision, setRevision] = useState(0);
-
-  useEffect(() => {
-    setSelected(null);
-    setData(null);
-    setError("");
-  }, [view]);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let live = true;
-    const auth = { token: token() };
-    const request = view === "orders" ? call("orders", auth)
-      : view === "customers" ? call("customers", auth)
-      : view === "inventory" ? call("inventory", auth)
-      : view === "inquiries" ? call("inquiries", auth)
-      : view === "subscribers" ? call("subscribers", auth)
-      : call("dashboard", auth);
+    setData(null);
+    setError("");
+    const payload = { token: token(), page, pageSize: PAGE_SIZE };
+    const request = view === "orders" ? call("orders", payload)
+      : view === "customers" ? call("customers", payload)
+      : view === "inventory" ? call("inventory", payload)
+      : view === "inquiries" ? call("inquiries", payload)
+      : view === "subscribers" ? call("subscribers", payload)
+      : call("dashboard", { token: token() });
     request
       .then((result) => { if (live) setData(result); })
       .catch((err) => { if (live) setError(err.message); });
     return () => { live = false; };
-  }, [view, revision]);
+  }, [view, page, revision]);
 
   function refresh() {
     setRevision((value) => value + 1);
+  }
+
+  function goTo(next) {
+    setSelected(null);
+    setPage(next);
   }
 
   async function updateOrder(id, status) {
@@ -146,7 +173,8 @@ function Desk({ view }) {
 
   const listView = view !== "dashboard";
   if (error) return <p className="error">{error}</p>;
-  if (!data || Array.isArray(data) !== listView) return <DeskLoader />;
+  if (!data || (listView && !Array.isArray(data.items))) return <DeskLoader />;
+  const rows = listView ? data.items : [];
 
   if (view === "dashboard") {
     return (
@@ -185,8 +213,8 @@ function Desk({ view }) {
           <table>
             <thead><tr><th>Order</th><th>When</th><th>Customer</th><th>Occasion</th><th>Total</th><th>Status</th></tr></thead>
             <tbody>
-              {data.map((order) => (
-                <tr key={order.id} className={selected?.id === order.id ? "active" : ""} onClick={() => setSelected(order)}>
+              {rows.map((order, index) => (
+                <tr key={`${order.id}-${index}`} className={selected?.id === order.id && selected?.createdAt === order.createdAt ? "active" : ""} onClick={() => setSelected(order)}>
                   <td>{order.id}</td>
                   <td>{formatDate(order.createdAt)}</td>
                   <td>{order.firstName} {order.lastName}</td>
@@ -198,6 +226,7 @@ function Desk({ view }) {
             </tbody>
           </table>
         </div>
+        <Pager page={data.page} pages={data.pages} total={data.total} onPage={goTo} />
         {selected && (
           <aside className="detail">
             <strong>{selected.id}</strong>
@@ -222,7 +251,7 @@ function Desk({ view }) {
         <table>
           <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Spent</th></tr></thead>
           <tbody>
-            {data.map((customer) => (
+            {rows.map((customer) => (
               <tr key={customer.email}>
                 <td>{customer.firstName} {customer.lastName}</td>
                 <td>{customer.email}</td>
@@ -233,6 +262,7 @@ function Desk({ view }) {
             ))}
           </tbody>
         </table>
+        <Pager page={data.page} pages={data.pages} total={data.total} onPage={goTo} />
       </div>
     );
   }
@@ -243,7 +273,7 @@ function Desk({ view }) {
         <table>
           <thead><tr><th>Piece</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
           <tbody>
-            {data.map((product) => (
+            {rows.map((product) => (
               <tr key={product.id}>
                 <td>{product.name}</td>
                 <td>{product.category}</td>
@@ -264,6 +294,7 @@ function Desk({ view }) {
             ))}
           </tbody>
         </table>
+        <Pager page={data.page} pages={data.pages} total={data.total} onPage={goTo} />
       </div>
     );
   }
@@ -274,7 +305,7 @@ function Desk({ view }) {
         <table>
           <thead><tr><th>From</th><th>Topic</th><th>Message</th><th>Status</th></tr></thead>
           <tbody>
-            {data.map((item) => (
+            {rows.map((item) => (
               <tr key={item.id}>
                 <td>{item.name}<br />{item.email}</td>
                 <td>{item.topic}</td>
@@ -289,6 +320,7 @@ function Desk({ view }) {
             ))}
           </tbody>
         </table>
+        <Pager page={data.page} pages={data.pages} total={data.total} onPage={goTo} />
       </div>
     );
   }
@@ -298,11 +330,12 @@ function Desk({ view }) {
       <table>
         <thead><tr><th>Email</th><th>Joined</th></tr></thead>
         <tbody>
-          {data.map((item) => (
+          {rows.map((item) => (
             <tr key={item.email}><td>{item.email}</td><td>{formatDate(item.createdAt)}</td></tr>
           ))}
         </tbody>
       </table>
+      <Pager page={data.page} pages={data.pages} total={data.total} onPage={goTo} />
     </div>
   );
 }
