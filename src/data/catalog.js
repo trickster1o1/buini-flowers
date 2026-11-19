@@ -49,13 +49,11 @@ const DRIED_COLORS = [
   { name: "Ivory", hex: "#f3efe6" },
 ];
 
-const SIZES = ["Petite", "Classic", "Grand"];
 const CARE =
   "Stems are cut the morning they leave the studio. Recut the ends, change the water daily, and keep the bunch out of direct sun.";
 
 function piece(partial) {
   return {
-    sizes: SIZES,
     colors: SOFT,
     additional: CARE,
     featured: false,
@@ -222,7 +220,7 @@ export const products = [
     stock: 4,
     rating: 5,
     description: "A flat wreath of sun palms, strawflower, and terracotta ribbon for a door or wall.",
-    details: ["Ready to hang", "About 35 cm across in Classic", "Indoor use"],
+    details: ["Ready to hang", "About 35 cm across", "Indoor use"],
     additional: "Dried work is arranged to last the season. Keep it dry and out of steam.",
     images: [photo("photo-1613539246066-78db6ec4ff0f"), photo("photo-1507290439931-a861b5a38200")],
   }),
@@ -499,7 +497,6 @@ export const pages = {
     paragraphs: [
       "An order on this site is a request to the studio. It is confirmed when we reply by email. Payment is collected on delivery, at pickup, or by bank transfer before wedding work begins.",
       "Stem substitutions happen when the market does not have a flower on the morning we tie. We stay inside the palette and the price you agreed.",
-      "Petite, Classic, and Grand change the volume of the bunch. The photograph shows the Classic size.",
       "This demonstration stores orders so the shop and the studio desk can be reviewed. Do not enter a real card number. There is nowhere on the site that asks for one.",
     ],
   },
@@ -538,18 +535,6 @@ export function money(value) {
 
 export function moneyRound(value) {
   return Math.round(Number(value || 0) * 100) / 100;
-}
-
-export function unitPrice(product, size) {
-  const factor = size === "Petite" ? 0.8 : size === "Grand" ? 1.35 : 1;
-  return Math.round(product.price * factor);
-}
-
-export function priceRange(product) {
-  const prices = (product.sizes || ["Classic"]).map((size) => unitPrice(product, size));
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  return min === max ? money(min) : `${money(min)} – ${money(max)}`;
 }
 
 export function calcDiscount(coupon, subtotal) {
@@ -592,7 +577,7 @@ export function seedCrm() {
       total: 174,
       status: "Delivered",
       items: [
-        { productId: "p13", slug: "bridal-cascade", name: "Bridal Cascade", brand: "BRIDAL", size: "Classic", color: "Ivory", unitPrice: 180, qty: 1, image: products[12].images[0] },
+        { productId: "p13", slug: "bridal-cascade", name: "Bridal Cascade", brand: "BRIDAL", color: "Ivory", unitPrice: 180, qty: 1, image: products[12].images[0] },
       ],
     },
     {
@@ -616,8 +601,8 @@ export function seedCrm() {
       total: 140,
       status: "Processing",
       items: [
-        { productId: "p01", slug: "blush-peony-cloud", name: "Blush Peony Cloud", brand: "ATELIER", size: "Classic", color: "Blush", unitPrice: 86, qty: 1, image: products[0].images[0] },
-        { productId: "p06", slug: "sunset-tulips", name: "Sunset Tulip Bunch", brand: "SEASON", size: "Classic", color: "Kraft", unitPrice: 42, qty: 1, image: products[5].images[0] },
+        { productId: "p01", slug: "blush-peony-cloud", name: "Blush Peony Cloud", brand: "ATELIER", color: "Blush", unitPrice: 86, qty: 1, image: products[0].images[0] },
+        { productId: "p06", slug: "sunset-tulips", name: "Sunset Tulip Bunch", brand: "SEASON", color: "Kraft", unitPrice: 42, qty: 1, image: products[5].images[0] },
       ],
     },
     {
@@ -641,7 +626,7 @@ export function seedCrm() {
       total: 68,
       status: "New",
       items: [
-        { productId: "p10", slug: "pampas-cloud", name: "Dried Pampas Cloud", brand: "DRIED", size: "Classic", color: "Kraft", unitPrice: 68, qty: 1, image: products[9].images[0] },
+        { productId: "p10", slug: "pampas-cloud", name: "Dried Pampas Cloud", brand: "DRIED", color: "Kraft", unitPrice: 68, qty: 1, image: products[9].images[0] },
       ],
     },
   ];

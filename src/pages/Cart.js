@@ -43,7 +43,7 @@ export default function Cart() {
                   <img src={line.image} alt="" />
                   <div>
                     <Link to={`/product/${line.slug}`}>{line.name}</Link>
-                    <small>{line.brand} · {line.size} · {line.color}</small>
+                    <small>{[line.brand, line.color].filter(Boolean).join(" · ")}</small>
                     <div><button className="remove" type="button" onClick={() => removeLine(line.key)}>Remove</button></div>
                   </div>
                 </div>

@@ -64,7 +64,6 @@ const DEFAULT_COLORS = [
   { name: "Sage", hex: "#9aab84" },
   { name: "Kraft", hex: "#c4a574" },
 ];
-const CARE = "Stems are cut the morning they leave the studio. Recut the ends, change the water daily, and keep the bunch out of direct sun.";
 
 function slugify(name) {
   return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "piece";
@@ -92,8 +91,8 @@ function readPiece(payload, existing) {
   let compareAt = payload.compareAt === "" || payload.compareAt == null ? null : Math.round(Number(payload.compareAt));
   if (compareAt != null && !(compareAt > price)) compareAt = null;
   const brand = String(payload.brand || existing?.brand || "ATELIER").trim() || "ATELIER";
-  const description = String(payload.description || "").trim() || existing?.description || "Tied in the studio.";
-  const additional = String(payload.additional || "").trim() || existing?.additional || CARE;
+  const description = payload.description == null ? (existing?.description || "") : String(payload.description).trim();
+  const additional = payload.additional == null ? (existing?.additional || "") : String(payload.additional).trim();
   const detailLines = lines(payload.details);
   const details = detailLines.length ? detailLines : existing?.details || ["Hand-tied in the studio"];
   const imageLines = lines(payload.image);
@@ -101,8 +100,6 @@ function readPiece(payload, existing) {
   images.forEach((image) => {
     if (!/^https?:\/\//i.test(image) && !String(image).startsWith("/")) throw new Error("Each photo needs a full image link.");
   });
-  const sizeLines = lines(payload.sizes);
-  const sizes = sizeLines.length ? sizeLines : existing?.sizes || ["Petite", "Classic", "Grand"];
   const colorLines = lines(payload.colors);
   const colors = colorLines.length
     ? colorLines.map((line) => {
@@ -128,7 +125,6 @@ function readPiece(payload, existing) {
     featured: flag(payload.featured, existing?.featured),
     trending: flag(payload.trending, existing?.trending),
     madeToOrder: flag(payload.madeToOrder, existing?.madeToOrder),
-    sizes,
     colors,
     images,
     details,

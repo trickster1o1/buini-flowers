@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { call } from "../api/client";
-import { money, priceRange, productReviews, unitPrice } from "../data/catalog";
+import { money, productReviews } from "../data/catalog";
 import { useShop } from "../context/ShopContext";
 import useProducts from "../components/useProducts";
 import useTitle from "../components/useTitle";
@@ -16,7 +16,6 @@ export default function Product() {
   const [product, setProduct] = useState(null);
   const [error, setError] = useState("");
   const [image, setImage] = useState(0);
-  const [size, setSize] = useState("Classic");
   const [color, setColor] = useState("");
   const [qty, setQty] = useState(1);
   const [open, setOpen] = useState("description");
@@ -28,8 +27,7 @@ export default function Product() {
       .then((data) => {
         if (!live) return;
         setProduct(data);
-        setSize(data.sizes.includes("Classic") ? "Classic" : data.sizes[0]);
-        setColor(data.colors[0].name);
+        setColor(data.colors[0]?.name || "");
         setImage(0);
         setQty(1);
         remember.current(data.slug);
@@ -78,19 +76,9 @@ export default function Product() {
           <h1>{product.name}</h1>
           <p className="pdp-price">
             {product.compareAt ? <s>{money(product.compareAt)}</s> : null}
-            <span className={product.compareAt ? "sale" : ""}>{priceRange(product)}</span>
+            <span className={product.compareAt ? "sale" : ""}>{money(product.price)}</span>
           </p>
           <p className="blurb">{product.description}</p>
-          <div className="option">
-            <p>Size — {size}</p>
-            <div className="size-row">
-              {product.sizes.map((item) => (
-                <button key={item} type="button" className={size === item ? "on" : ""} onClick={() => setSize(item)}>
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="option">
             <p>Color — {color}</p>
             <div className="color-row">
@@ -106,14 +94,14 @@ export default function Product() {
               ))}
             </div>
           </div>
-          <p className="quiet">{soldOut ? "Sold out" : product.madeToOrder ? "Tied to order" : `${product.stock} in the studio`} · {money(unitPrice(product, size))}</p>
+          <p className="quiet">{soldOut ? "Sold out" : product.madeToOrder ? "Tied to order" : `${product.stock} in the studio`} · {money(product.price)}</p>
           <div className="buy">
             <div className="stepper">
               <button type="button" aria-label="Decrease quantity" onClick={() => setQty((value) => Math.max(1, value - 1))}>–</button>
               <span>{qty}</span>
               <button type="button" aria-label="Increase quantity" onClick={() => setQty((value) => value + 1)}>+</button>
             </div>
-            <button className="add" type="button" disabled={soldOut} onClick={() => addToCart(product, { size, color, qty })}>
+            <button className="add" type="button" disabled={soldOut} onClick={() => addToCart(product, { color, qty })}>
               {soldOut ? "Sold out" : "Add to cart"}
             </button>
           </div>

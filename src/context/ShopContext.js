@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { calcDiscount, moneyRound, unitPrice } from "../data/catalog";
+import { calcDiscount, moneyRound } from "../data/catalog";
 import { call, subscribeCatalog } from "../api/client";
 
 const ShopContext = createContext(null);
@@ -37,16 +37,15 @@ export function ShopProvider({ children }) {
     timer.current = setTimeout(() => setToast(""), 2400);
   }
 
-  function addToCart(product, options) {
-    const size = options.size || product.sizes[0];
-    const color = options.color || product.colors[0].name;
+  function addToCart(product, options = {}) {
+    const color = options.color || product.colors?.[0]?.name || "";
     const qty = Math.max(1, Number(options.qty) || 1);
     if (product.stock <= 0) {
       notify("That piece is sold out.");
       return;
     }
-    const price = unitPrice(product, size);
-    const key = `${product.id}|${size}|${color}`;
+    const price = Math.round(Number(product.price) || 0);
+    const key = `${product.id}|${color}`;
     const existing = cart.find((line) => line.key === key);
     const inCart = cart.filter((line) => line.productId === product.id).reduce((sum, line) => sum + line.qty, 0);
     if (inCart + qty > product.stock) {
@@ -61,7 +60,6 @@ export function ShopProvider({ children }) {
       name: product.name,
       brand: product.brand,
       image: product.images[0],
-      size,
       color,
       unitPrice: price,
       qty: nextQty,

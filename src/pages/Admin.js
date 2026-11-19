@@ -240,7 +240,7 @@ function Desk({ view }) {
             <p>{selected.firstName} {selected.lastName} · {selected.email} · {selected.phone}</p>
             <p>{selected.address}, {selected.city} · {selected.shipping} · {formatDate(selected.deliveryDate)}</p>
             {selected.note && <p>Note: {selected.note}</p>}
-            <ul>{(selected.items || []).map((item) => <li key={`${item.productId}${item.size}${item.color}`}>{item.qty} × {item.name} · {item.size} · {item.color}</li>)}</ul>
+            <ul>{(selected.items || []).map((item) => <li key={`${item.productId}${item.color}`}>{item.qty} × {item.name}{item.color ? ` · ${item.color}` : ""}</li>)}</ul>
             <label>Status
               <select value={selected.status} onChange={(event) => updateOrder(selected.id, event.target.value)}>
                 {STATUSES.map((status) => <option key={status}>{status}</option>)}
@@ -329,6 +329,8 @@ function Desk({ view }) {
   );
 }
 
+const DEFAULT_COLOR_LINES = "Blush:#e7b7b0\nIvory:#f3efe6\nSage:#9aab84\nKraft:#c4a574";
+
 const EMPTY_PIECE = {
   name: "",
   brand: "ATELIER",
@@ -337,8 +339,13 @@ const EMPTY_PIECE = {
   compareAt: "",
   stock: "1",
   description: "",
+  additional: "",
   image: "",
   details: "",
+  colors: DEFAULT_COLOR_LINES,
+  featured: false,
+  trending: false,
+  madeToOrder: false,
 };
 
 function formFromProduct(product) {
@@ -355,7 +362,6 @@ function formFromProduct(product) {
     additional: product.additional || "",
     image: (product.images || []).join("\n"),
     details: (product.details || []).join("\n"),
-    sizes: (product.sizes || []).join("\n"),
     colors: (product.colors || []).map((color) => `${color.name}:${color.hex}`).join("\n"),
     featured: Boolean(product.featured),
     trending: Boolean(product.trending),
@@ -383,7 +389,10 @@ function InventoryDesk({ rows, page, pages, total, onPage, onAdded, onSaved }) {
   }, [editing]);
 
   function setField(field) {
-    return (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
+    return (event) => {
+      const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+      setForm((current) => ({ ...current, [field]: value }));
+    };
   }
 
   function setEditField(field) {
@@ -494,9 +503,16 @@ function InventoryDesk({ rows, page, pages, total, onPage, onAdded, onSaved }) {
             <label>Price<input type="number" min="1" step="1" value={form.price} onChange={setField("price")} required /></label>
             <label>Compare at<input type="number" min="0" step="1" value={form.compareAt} onChange={setField("compareAt")} placeholder="Optional sale price" /></label>
           </div>
-          <label>Description<textarea rows="3" value={form.description} onChange={setField("description")} /></label>
+          <div className="checks">
+            <label className="check"><input type="checkbox" checked={form.featured} onChange={setField("featured")} /> Featured</label>
+            <label className="check"><input type="checkbox" checked={form.trending} onChange={setField("trending")} /> Trending</label>
+            <label className="check"><input type="checkbox" checked={form.madeToOrder} onChange={setField("madeToOrder")} /> Made to order</label>
+          </div>
+          <label>Description<textarea rows="3" value={form.description} onChange={setField("description")} placeholder="The sentence under the price" /></label>
+          <label>Additional information<textarea rows="3" value={form.additional} onChange={setField("additional")} placeholder="Care, timing, or anything else the shopper should know" /></label>
           <label>Photo link<input value={form.image} onChange={setField("image")} placeholder="https://" /></label>
           <label>Details<textarea rows="3" value={form.details} onChange={setField("details")} placeholder="One line for each detail" /></label>
+          <label>Colors<textarea rows="4" value={form.colors} onChange={setField("colors")} placeholder="Name:#hex" /></label>
           <button type="submit" disabled={saving}>{saving ? "Saving" : "Save piece"}</button>
           {formError && <p className="error">{formError}</p>}
         </form>
@@ -550,14 +566,11 @@ function InventoryDesk({ rows, page, pages, total, onPage, onAdded, onSaved }) {
                   <label className="check"><input type="checkbox" checked={editForm.madeToOrder} onChange={setEditField("madeToOrder")} /> Made to order</label>
                 </div>
               </div>
-              <label>Description<textarea rows="3" value={editForm.description} onChange={setEditField("description")} /></label>
-              <label>Care<textarea rows="2" value={editForm.additional} onChange={setEditField("additional")} /></label>
+              <label>Description<textarea rows="3" value={editForm.description} onChange={setEditField("description")} placeholder="The sentence under the price" /></label>
+              <label>Additional information<textarea rows="3" value={editForm.additional} onChange={setEditField("additional")} placeholder="Care, timing, or anything else the shopper should know" /></label>
               <label>Photos<textarea rows="3" value={editForm.image} onChange={setEditField("image")} placeholder="One image link per line" /></label>
               <label>Details<textarea rows="3" value={editForm.details} onChange={setEditField("details")} placeholder="One line for each detail" /></label>
-              <div className="stack two">
-                <label>Sizes<textarea rows="3" value={editForm.sizes} onChange={setEditField("sizes")} placeholder="One size per line" /></label>
-                <label>Colors<textarea rows="3" value={editForm.colors} onChange={setEditField("colors")} placeholder="Name:#hex" /></label>
-              </div>
+              <label>Colors<textarea rows="3" value={editForm.colors} onChange={setEditField("colors")} placeholder="Name:#hex" /></label>
               <div className="modal-actions">
                 <button type="submit" disabled={saving}>{saving ? "Saving" : "Save changes"}</button>
                 <button className="ghost" type="button" onClick={() => setEditing(null)}>Cancel</button>

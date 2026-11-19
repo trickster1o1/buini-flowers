@@ -35,7 +35,6 @@ var HEADERS = {
 var SOFT = "Blush:#e7b7b0|Ivory:#f3efe6|Sage:#9aab84|Kraft:#c4a574";
 var BRIDAL = "Ivory:#f7f4ee|Blush:#e7b7b0|Black:#1c1c1c";
 var DRIED = "Kraft:#c4a574|Clay:#c47a5a|Ivory:#f3efe6";
-var SIZES = "Petite|Classic|Grand";
 var CARE = "Stems are cut the morning they leave the studio. Recut the ends, change the water daily, and keep the bunch out of direct sun.";
 
 function img(id) {
@@ -59,7 +58,7 @@ function piece(id, slug, brand, name, price, compareAt, category, badge, stock, 
     featured: flags.indexOf("f") >= 0,
     trending: flags.indexOf("t") >= 0,
     madeToOrder: flags.indexOf("m") >= 0,
-    sizes: SIZES,
+    sizes: "",
     colors: colors || SOFT,
     images: images,
     details: details
@@ -78,7 +77,7 @@ function catalog() {
     piece("p08", "white-lily-stems", "STEM", "White Lily Stems", 54, "", "Stems", "", 7, "", "Three stems of white oriental lily, buds just opening.", "Three stems|Pinch the pollen to protect linen|Strong evening scent", img("photo-1487070183336-b863922373d4") + "|" + img("photo-1591886960571-74d43a9d4166")),
     piece("p09", "sage-eucalyptus", "STEM", "Sage Eucalyptus Wrap", 38, "", "Stems", "", 9, "", "Seeded eucalyptus and olive, tied for a mantel, a bath, or the neck of a gift.", "Foliage only|Dries beautifully|Long stems", img("photo-1501004318641-b39e6451bec6") + "|" + img("photo-1416879595882-3373a0480b5b")),
     piece("p10", "pampas-cloud", "DRIED", "Dried Pampas Cloud", 68, "", "Dried", "", 6, "ft", "Bleached and natural pampas with bunny tail and a clay ribbon.", "Preserved and dried|Keep away from humidity|No water needed", img("photo-1507290439931-a861b5a38200") + "|" + img("photo-1606041008023-472dfb5e530f"), DRIED),
-    piece("p11", "palm-wreath", "DRIED", "Terracotta Palm Wreath", 84, "", "Dried", "", 4, "", "A flat wreath of sun palms, strawflower, and terracotta ribbon.", "Ready to hang|About 35 cm across in Classic|Indoor use", img("photo-1613539246066-78db6ec4ff0f") + "|" + img("photo-1507290439931-a861b5a38200"), DRIED),
+    piece("p11", "palm-wreath", "DRIED", "Terracotta Palm Wreath", 84, "", "Dried", "", 4, "", "A flat wreath of sun palms, strawflower, and terracotta ribbon.", "Ready to hang|About 35 cm across|Indoor use", img("photo-1613539246066-78db6ec4ff0f") + "|" + img("photo-1507290439931-a861b5a38200"), DRIED),
     piece("p12", "rose-dome", "DRIED", "Preserved Rose Dome", 120, 145, "Dried", "SALE", 3, "", "Preserved roses under a glass dome, in a color that holds for years.", "Glass dome included|Preserved, not fresh|A kept gift", img("photo-1518895949257-7621c3c786d7") + "|" + img("photo-1561181286-d3fee7d55364"), DRIED),
     piece("p13", "bridal-cascade", "BRIDAL", "Bridal Cascade", 180, 220, "Wedding", "SALE", 5, "fm", "A cascading bridal bunch of garden rose, jasmine, and trailing vine.", "Tied to order|Trial bunch available|Ivory, blush, or black ribbon", img("photo-1519225421980-715cb0215aed") + "|" + img("photo-1526047932273-341f2a7631f9"), BRIDAL),
     piece("p14", "aisle-cluster", "BRIDAL", "Ceremony Aisle Cluster", 96, "", "Wedding", "", 4, "m", "A pew or aisle cluster designed to repeat down a ceremony.", "Priced per cluster|Mechanics included|Palette matched to the bridal bunch", img("photo-1519741497674-611481863552") + "|" + img("photo-1487530811176-3780de880c2d"), BRIDAL),
@@ -191,9 +190,9 @@ function seed(ss) {
     { email: "jonah@buini.test", firstName: "Jonah", lastName: "Adeyemi", phone: "+977 980-100-0003", orders: 1, spent: 68, createdAt: "2026-11-19T04:40:00.000Z" }
   ]);
   writeSheet(ss, "Orders", [
-    orderSeed("BF-1042", "2026-11-16T10:30:00.000Z", "mira@buini.test", "Mira", "Chen", "+977 980-100-0001", "12 Lazimpat Marg", "Anniversary", "Please leave it with the doorman.", "2026-11-17", "flat", "BLOOM10", 18, 180, 12, 174, "Delivered", [{ productId: "p13", slug: "bridal-cascade", name: "Bridal Cascade", brand: "BRIDAL", size: "Classic", color: "Ivory", unitPrice: 180, qty: 1, image: img("photo-1519225421980-715cb0215aed") }]),
-    orderSeed("BF-1038", "2026-11-18T08:10:00.000Z", "elena@buini.test", "Elena", "Voss", "+977 980-100-0002", "4 Sanepa Lane", "Birthday", "No lilies, please.", "2026-11-19", "flat", "", 0, 128, 12, 140, "Processing", [{ productId: "p01", slug: "blush-peony-cloud", name: "Blush Peony Cloud", brand: "ATELIER", size: "Classic", color: "Blush", unitPrice: 86, qty: 1, image: img("photo-1525310072745-f49212b5ac6d") }, { productId: "p06", slug: "sunset-tulips", name: "Sunset Tulip Bunch", brand: "SEASON", size: "Classic", color: "Kraft", unitPrice: 42, qty: 1, image: img("photo-1520763185298-1b434c919102") }]),
-    orderSeed("BF-1033", "2026-11-19T04:40:00.000Z", "jonah@buini.test", "Jonah", "Adeyemi", "+977 980-100-0003", "Thamel Marg", "Thank you", "I will collect this after 4pm.", "2026-11-20", "pickup", "", 0, 68, 0, 68, "New", [{ productId: "p10", slug: "pampas-cloud", name: "Dried Pampas Cloud", brand: "DRIED", size: "Classic", color: "Kraft", unitPrice: 68, qty: 1, image: img("photo-1507290439931-a861b5a38200") }])
+    orderSeed("BF-1042", "2026-11-16T10:30:00.000Z", "mira@buini.test", "Mira", "Chen", "+977 980-100-0001", "12 Lazimpat Marg", "Anniversary", "Please leave it with the doorman.", "2026-11-17", "flat", "BLOOM10", 18, 180, 12, 174, "Delivered", [{ productId: "p13", slug: "bridal-cascade", name: "Bridal Cascade", brand: "BRIDAL", color: "Ivory", unitPrice: 180, qty: 1, image: img("photo-1519225421980-715cb0215aed") }]),
+    orderSeed("BF-1038", "2026-11-18T08:10:00.000Z", "elena@buini.test", "Elena", "Voss", "+977 980-100-0002", "4 Sanepa Lane", "Birthday", "No lilies, please.", "2026-11-19", "flat", "", 0, 128, 12, 140, "Processing", [{ productId: "p01", slug: "blush-peony-cloud", name: "Blush Peony Cloud", brand: "ATELIER", color: "Blush", unitPrice: 86, qty: 1, image: img("photo-1525310072745-f49212b5ac6d") }, { productId: "p06", slug: "sunset-tulips", name: "Sunset Tulip Bunch", brand: "SEASON", color: "Kraft", unitPrice: 42, qty: 1, image: img("photo-1520763185298-1b434c919102") }]),
+    orderSeed("BF-1033", "2026-11-19T04:40:00.000Z", "jonah@buini.test", "Jonah", "Adeyemi", "+977 980-100-0003", "Thamel Marg", "Thank you", "I will collect this after 4pm.", "2026-11-20", "pickup", "", 0, 68, 0, 68, "New", [{ productId: "p10", slug: "pampas-cloud", name: "Dried Pampas Cloud", brand: "DRIED", color: "Kraft", unitPrice: 68, qty: 1, image: img("photo-1507290439931-a861b5a38200") }])
   ]);
   writeSheet(ss, "Inquiries", [
     { id: "i1", name: "Anika Sherpa", email: "anika@example.com", topic: "Wedding", message: "We need a ceremony arch and eight aisle clusters for 14 June in Patan. Soft ivory and dried grasses.", createdAt: "2026-11-15T09:00:00.000Z", status: "New" },
@@ -355,11 +354,6 @@ function round2(value) {
   return Math.round(Number(value || 0) * 100) / 100;
 }
 
-function sizedPrice(price, size) {
-  var factor = size === "Petite" ? 0.8 : size === "Grand" ? 1.35 : 1;
-  return Math.round(Number(price) * factor);
-}
-
 function assertAdmin(token) {
   if (!token || CacheService.getScriptCache().get("tok_" + token) !== "1") {
     throw new Error("Please sign in to the studio desk again.");
@@ -472,8 +466,8 @@ function pieceFields(payload, existing) {
   var pieceCompare = payload.compareAt === "" || payload.compareAt === null || payload.compareAt === undefined ? "" : Math.round(Number(payload.compareAt));
   if (pieceCompare !== "" && !(pieceCompare > piecePrice)) pieceCompare = "";
   var pieceBrand = String(payload.brand || (existing ? existing.brand : "ATELIER") || "ATELIER").trim() || "ATELIER";
-  var pieceDescription = String(payload.description || "").trim() || (existing && existing.description) || "Tied in the studio.";
-  var pieceAdditional = String(payload.additional || "").trim() || (existing && existing.additional) || CARE;
+  var pieceDescription = payload.description == null ? ((existing && existing.description) || "") : String(payload.description).trim();
+  var pieceAdditional = payload.additional == null ? ((existing && existing.additional) || "") : String(payload.additional).trim();
   var pieceDetails = pieceLines(payload.details);
   if (!pieceDetails.length) pieceDetails = existing && existing.details ? String(existing.details).split("|").filter(function (line) { return line; }) : ["Hand-tied in the studio"];
   var pieceImages = pieceLines(payload.image);
@@ -482,8 +476,6 @@ function pieceFields(payload, existing) {
   pieceImages.forEach(function (image) {
     if (image.indexOf("http") !== 0 && image.indexOf("/") !== 0) throw new Error("Each photo needs a full image link.");
   });
-  var sizeLines = pieceLines(payload.sizes);
-  var sizes = sizeLines.length ? sizeLines.join("|") : (existing && existing.sizes ? existing.sizes : SIZES);
   var colorLines = pieceLines(payload.colors);
   var colors = colorLines.length ? colorLines.map(function (line) {
     var bits = line.split(":");
@@ -507,7 +499,7 @@ function pieceFields(payload, existing) {
     featured: flag(payload.featured),
     trending: flag(payload.trending),
     madeToOrder: flag(payload.madeToOrder),
-    sizes: sizes,
+    sizes: "",
     colors: colors,
     images: pieceImages.join("|"),
     details: pieceDetails.join("|")
@@ -688,9 +680,8 @@ function placeOrder(payload) {
         slug: row.slug,
         name: row.name,
         brand: row.brand,
-        size: item.size || "Classic",
         color: item.color || "",
-        unitPrice: sizedPrice(row.price, item.size || "Classic"),
+        unitPrice: Math.round(Number(row.price) || 0),
         qty: qty,
         image: pipes(row.images)[0] || ""
       };
