@@ -56,8 +56,104 @@ function withStock(list, stock) {
   }));
 }
 
+const PIECE_CATEGORIES = ["Bouquets", "Dried", "Wedding", "Stems", "Seasonal"];
+const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1200&q=80";
+const DEFAULT_COLORS = [
+  { name: "Blush", hex: "#e7b7b0" },
+  { name: "Ivory", hex: "#f3efe6" },
+  { name: "Sage", hex: "#9aab84" },
+  { name: "Kraft", hex: "#c4a574" },
+];
+const CARE = "Stems are cut the morning they leave the studio. Recut the ends, change the water daily, and keep the bunch out of direct sun.";
+
+function slugify(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "piece";
+}
+
+function allProducts(crm) {
+  const extras = Array.isArray(crm.products) ? crm.products : [];
+  const edits = crm.edits || {};
+  const base = catalogProducts.map((product) => (edits[product.id] ? { ...product, ...edits[product.id] } : product));
+  const known = new Set(base.map((product) => product.id));
+  return base.concat(extras.filter((product) => !known.has(product.id)));
+}
+
+function lines(value) {
+  return String(value || "").split(/\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+function readPiece(payload, existing) {
+  const name = String(payload.name || "").trim();
+  if (!name) throw new Error("Name the piece.");
+  const price = Math.round(Number(payload.price));
+  if (!price || price < 1) throw new Error("Enter a price.");
+  const category = PIECE_CATEGORIES.includes(payload.category) ? payload.category : existing?.category || "Bouquets";
+  const stock = Math.max(0, Math.round(Number(payload.stock) || 0));
+  let compareAt = payload.compareAt === "" || payload.compareAt == null ? null : Math.round(Number(payload.compareAt));
+  if (compareAt != null && !(compareAt > price)) compareAt = null;
+  const brand = String(payload.brand || existing?.brand || "ATELIER").trim() || "ATELIER";
+  const description = String(payload.description || "").trim() || existing?.description || "Tied in the studio.";
+  const additional = String(payload.additional || "").trim() || existing?.additional || CARE;
+  const detailLines = lines(payload.details);
+  const details = detailLines.length ? detailLines : existing?.details || ["Hand-tied in the studio"];
+  const imageLines = lines(payload.image);
+  const images = imageLines.length ? imageLines : existing?.images || [DEFAULT_IMAGE];
+  images.forEach((image) => {
+    if (!/^https?:\/\//i.test(image) && !String(image).startsWith("/")) throw new Error("Each photo needs a full image link.");
+  });
+  const sizeLines = lines(payload.sizes);
+  const sizes = sizeLines.length ? sizeLines : existing?.sizes || ["Petite", "Classic", "Grand"];
+  const colorLines = lines(payload.colors);
+  const colors = colorLines.length
+    ? colorLines.map((line) => {
+      const [colorName, hex] = line.split(":");
+      return { name: String(colorName || "").trim(), hex: String(hex || "#dddddd").trim() };
+    })
+    : existing?.colors || DEFAULT_COLORS;
+  let badge = String(payload.badge || "").trim();
+  if (stock === 0) badge = "SOLD OUT";
+  else if (badge === "SOLD OUT") badge = compareAt ? "SALE" : "";
+  else if (!badge && compareAt) badge = "SALE";
+  const flag = (value, fallback) => value === true || value === "true" || (value == null && Boolean(fallback));
+  return {
+    brand,
+    name,
+    price,
+    compareAt,
+    category,
+    badge,
+    description,
+    additional,
+    stock,
+    featured: flag(payload.featured, existing?.featured),
+    trending: flag(payload.trending, existing?.trending),
+    madeToOrder: flag(payload.madeToOrder, existing?.madeToOrder),
+    sizes,
+    colors,
+    images,
+    details,
+  };
+}
+
+function makeProduct(payload, existing) {
+  const fields = readPiece(payload);
+  const max = existing.reduce((n, product) => Math.max(n, Number(String(product.id).replace(/\D/g, "")) || 0), 0);
+  const next = max + 1;
+  const id = `p${next < 10 ? "0" : ""}${next}`;
+  const base = slugify(fields.name);
+  const taken = new Set(existing.map((product) => product.slug));
+  let slug = base;
+  let n = 2;
+  while (taken.has(slug)) {
+    slug = `${base}-${n}`;
+    n += 1;
+  }
+  return { id, slug, rating: 5, ...fields };
+}
+
 export function readLocalProducts() {
-  return withStock(catalogProducts, readCrm().stock || {});
+  const crm = readCrm();
+  return withStock(allProducts(crm), crm.stock || {});
 }
 
 function nextOrderId(orders) {
@@ -106,7 +202,7 @@ function dashboardFrom(crm) {
   const active = crm.orders.filter((order) => order.status !== "Cancelled");
   const revenue = moneyRound(active.reduce((sum, order) => sum + Number(order.total || 0), 0));
   const open = crm.orders.filter((order) => !["Delivered", "Cancelled"].includes(order.status)).length;
-  const inventory = withStock(catalogProducts, crm.stock || {});
+  const inventory = withStock(allProducts(crm), crm.stock || {});
   return {
     revenue,
     orders: crm.orders.length,
@@ -122,7 +218,7 @@ function dashboardFrom(crm) {
 
 function localCall(action, payload) {
   const crm = readCrm();
-  const stocked = () => withStock(catalogProducts, crm.stock || {});
+  const stocked = () => withStock(allProducts(crm), crm.stock || {});
 
   switch (action) {
     case "products":
@@ -187,7 +283,7 @@ function localCall(action, payload) {
       };
       if (!order.items || !order.items.length) throw new Error("Your basket is empty.");
       order.items.forEach((item) => {
-        const product = catalogProducts.find((entry) => entry.id === item.productId);
+        const product = allProducts(crm).find((entry) => entry.id === item.productId);
         const current = crm.stock[item.productId] ?? product?.stock ?? 0;
         if (current < item.qty) throw new Error(`${item.name} does not have enough stems left.`);
         crm.stock[item.productId] = current - item.qty;
@@ -224,6 +320,28 @@ function localCall(action, payload) {
       crm.stock[payload.id] = next;
       writeCrm(crm);
       return { id: payload.id, stock: next };
+    }
+    case "productCreate": {
+      const product = makeProduct(payload, allProducts(crm));
+      crm.products = Array.isArray(crm.products) ? crm.products : [];
+      crm.products.push(product);
+      writeCrm(crm);
+      return product;
+    }
+    case "productUpdate": {
+      const current = allProducts(crm).find((item) => item.id === payload.id);
+      if (!current) throw new Error("Record not found.");
+      const next = { ...current, ...readPiece(payload, current), id: current.id, slug: current.slug, rating: current.rating };
+      const extras = Array.isArray(crm.products) ? crm.products : [];
+      const index = extras.findIndex((item) => item.id === payload.id);
+      if (index >= 0) extras[index] = next;
+      else {
+        crm.edits = { ...(crm.edits || {}), [payload.id]: next };
+      }
+      crm.products = extras;
+      if (crm.stock) delete crm.stock[payload.id];
+      writeCrm(crm);
+      return next;
     }
     case "inquiries":
       return pageResult(crm.inquiries, payload);
@@ -288,7 +406,6 @@ export function loadProducts(force) {
   productPromise = call("products")
     .then((data) => {
       productCache = data;
-      emit();
       return data;
     })
     .finally(() => {

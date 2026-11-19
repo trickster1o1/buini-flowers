@@ -11,11 +11,11 @@ export default function useProducts() {
   useEffect(() => {
     let live = true;
     if (isRemote()) setLoading(true);
-    loadProducts(isRemote())
+    loadProducts(false)
       .then((data) => {
         if (!live) return;
-        setItems(data);
-        setError("");
+        setItems(Array.isArray(data) ? data : []);
+        setError(Array.isArray(data) ? "" : "The collection could not be loaded.");
       })
       .catch((err) => {
         if (live) setError(err.message || "The collection could not be loaded.");

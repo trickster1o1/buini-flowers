@@ -424,6 +424,30 @@ function pagedSheet(name, payload, mapRow, newestFirst) {
   };
 }
 
+function slugify(name) {
+  var slug = String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return slug || "piece";
+}
+
+function nextProductId(sheet) {
+  var max = 0;
+  columnValues(sheet, "id").forEach(function (row) {
+    var num = Number(String(row[0]).replace(/\D/g, ""));
+    if (!isNaN(num)) max = Math.max(max, num);
+  });
+  var next = max + 1;
+  return "p" + (next < 10 ? "0" : "") + next;
+}
+
+function uniqueSlug(sheet, base) {
+  var taken = {};
+  columnValues(sheet, "slug").forEach(function (row) { taken[String(row[0]).toLowerCase()] = true; });
+  if (!taken[base]) return base;
+  var n = 2;
+  while (taken[base + "-" + n]) n++;
+  return base + "-" + n;
+}
+
 function columnValues(sheet, header) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
@@ -431,6 +455,63 @@ function columnValues(sheet, header) {
   var col = headers.indexOf(header);
   if (col < 0) return [];
   return sheet.getRange(2, col + 1, lastRow - 1, 1).getValues();
+}
+
+function pieceLines(value) {
+  return String(value || "").split(/\n/).map(function (line) { return String(line).trim(); }).filter(function (line) { return line; });
+}
+
+function pieceFields(payload, existing) {
+  var pieceName = String(payload.name || "").trim();
+  if (!pieceName) throw new Error("Name the piece.");
+  var piecePrice = Math.round(Number(payload.price));
+  if (!piecePrice || piecePrice < 1) throw new Error("Enter a price.");
+  var pieceCategories = ["Bouquets", "Dried", "Wedding", "Stems", "Seasonal"];
+  var pieceCategory = pieceCategories.indexOf(payload.category) >= 0 ? payload.category : (existing ? existing.category : "Bouquets");
+  var pieceStock = Math.max(0, Math.round(Number(payload.stock) || 0));
+  var pieceCompare = payload.compareAt === "" || payload.compareAt === null || payload.compareAt === undefined ? "" : Math.round(Number(payload.compareAt));
+  if (pieceCompare !== "" && !(pieceCompare > piecePrice)) pieceCompare = "";
+  var pieceBrand = String(payload.brand || (existing ? existing.brand : "ATELIER") || "ATELIER").trim() || "ATELIER";
+  var pieceDescription = String(payload.description || "").trim() || (existing && existing.description) || "Tied in the studio.";
+  var pieceAdditional = String(payload.additional || "").trim() || (existing && existing.additional) || CARE;
+  var pieceDetails = pieceLines(payload.details);
+  if (!pieceDetails.length) pieceDetails = existing && existing.details ? String(existing.details).split("|").filter(function (line) { return line; }) : ["Hand-tied in the studio"];
+  var pieceImages = pieceLines(payload.image);
+  if (!pieceImages.length && existing && existing.images) pieceImages = String(existing.images).split("|").filter(function (line) { return line; });
+  if (!pieceImages.length) pieceImages = ["https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1200&q=80"];
+  pieceImages.forEach(function (image) {
+    if (image.indexOf("http") !== 0 && image.indexOf("/") !== 0) throw new Error("Each photo needs a full image link.");
+  });
+  var sizeLines = pieceLines(payload.sizes);
+  var sizes = sizeLines.length ? sizeLines.join("|") : (existing && existing.sizes ? existing.sizes : SIZES);
+  var colorLines = pieceLines(payload.colors);
+  var colors = colorLines.length ? colorLines.map(function (line) {
+    var bits = line.split(":");
+    return String(bits[0] || "").trim() + ":" + String(bits[1] || "#dddddd").trim();
+  }).join("|") : (existing && existing.colors ? existing.colors : SOFT);
+  var badge = String(payload.badge || "").trim();
+  if (pieceStock === 0) badge = "SOLD OUT";
+  else if (badge === "SOLD OUT") badge = pieceCompare ? "SALE" : "";
+  else if (!badge && pieceCompare) badge = "SALE";
+  function flag(value) { return value === true || value === "true" || value === "TRUE"; }
+  return {
+    brand: pieceBrand,
+    name: pieceName,
+    price: piecePrice,
+    compareAt: pieceCompare,
+    category: pieceCategory,
+    badge: badge,
+    description: pieceDescription,
+    additional: pieceAdditional,
+    stock: pieceStock,
+    featured: flag(payload.featured),
+    trending: flag(payload.trending),
+    madeToOrder: flag(payload.madeToOrder),
+    sizes: sizes,
+    colors: colors,
+    images: pieceImages.join("|"),
+    details: pieceDetails.join("|")
+  };
 }
 
 function handle(action, payload) {
@@ -540,6 +621,26 @@ function handle(action, payload) {
     else if (String(badge) === "SOLD OUT") badge = current.compareAt ? "SALE" : "";
     updateRow("Products", "id", payload.id, { stock: next, badge: badge });
     return { id: payload.id, stock: next };
+  }
+  if (action === "productCreate") {
+    assertAdmin(payload.token);
+    var fields = pieceFields(payload, null);
+    var productSheet = ensure().getSheetByName("Products");
+    var created = Object.assign({
+      id: nextProductId(productSheet),
+      slug: uniqueSlug(productSheet, slugify(fields.name)),
+      rating: 5
+    }, fields);
+    append("Products", created);
+    return mapProduct(created);
+  }
+  if (action === "productUpdate") {
+    assertAdmin(payload.token);
+    var currentPiece = table("Products").filter(function (row) { return String(row.id) === String(payload.id); })[0];
+    if (!currentPiece) throw new Error("Record not found.");
+    var updated = pieceFields(payload, currentPiece);
+    updateRow("Products", "id", payload.id, updated);
+    return mapProduct(Object.assign({}, currentPiece, updated));
   }
   if (action === "inquiries") {
     assertAdmin(payload.token);

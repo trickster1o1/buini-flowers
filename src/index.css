@@ -44,7 +44,7 @@ h1, h2, h3, p { margin: 0; }
   background: transparent;
 }
 
-.btn, .news-form button, .summary .checkout, .buy .add, .account-card button, .admin-login button, .place-order {
+.btn, .news-form button, .summary .checkout, .buy .add, .account-card button, .admin-login button, .place-order, .piece-form button[type="submit"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -521,6 +521,19 @@ th { text-align: left; font-size: 11px; letter-spacing: 0.14em; text-transform: 
 td { padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tr.active { background: #fafafa; }
 .detail { border: 1px solid var(--line); padding: 16px; margin-top: 16px; display: grid; gap: 6px; }
+.piece-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.piece-form { border: 1px solid var(--line); padding: 16px; margin-bottom: 18px; }
+.piece-form button { justify-self: start; }
+.piece-form.modal-form { border: 0; padding: 0; margin: 0; }
+.checks { display: grid; align-content: end; gap: 8px; }
+.piece-form label.check { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 14px; color: #111; }
+.piece-form label.check input { width: auto; height: auto; }
+.modal-back { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 24px; background: rgba(20, 20, 20, 0.45); }
+.modal { width: min(760px, 100%); max-height: min(860px, calc(100vh - 48px)); overflow: auto; background: #fff; padding: 22px; }
+.modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.modal-head h2 { font-family: var(--serif); font-weight: 400; font-size: 32px; }
+.modal-actions { display: flex; gap: 8px; align-items: center; }
+.modal-actions .ghost { height: 46px; }
 .admin-tools { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 16px; }
 .ghost {
   background: #fff;

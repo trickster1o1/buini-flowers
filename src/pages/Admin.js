@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import rose from "../rose.jpg";
-import { call, isRemote } from "../api/client";
-import { ADMIN_EMAIL, ADMIN_PASSWORD, formatDate, money } from "../data/catalog";
+import { call, invalidateProducts, isRemote } from "../api/client";
+import { ADMIN_EMAIL, ADMIN_PASSWORD, categories, formatDate, money } from "../data/catalog";
 import useTitle from "../components/useTitle";
 
 const STATUSES = ["New", "Processing", "Ready", "Out for delivery", "Delivered", "Cancelled"];
@@ -161,8 +161,15 @@ function Desk({ view }) {
     refresh();
   }
 
-  async function updateStock(id, stock) {
-    await call("stock", { token: token(), id, stock });
+  function showNewPiece() {
+    invalidateProducts();
+    const last = Math.max(1, Math.ceil(((data?.total || 0) + 1) / PAGE_SIZE));
+    if (page === last) refresh();
+    else setPage(last);
+  }
+
+  function showSavedPiece() {
+    invalidateProducts();
     refresh();
   }
 
@@ -269,33 +276,15 @@ function Desk({ view }) {
 
   if (view === "inventory") {
     return (
-      <div className="table-wrap">
-        <table>
-          <thead><tr><th>Piece</th><th>Category</th><th>Price</th><th>Stock</th></tr></thead>
-          <tbody>
-            {rows.map((product) => (
-              <tr key={product.id}>
-                <td>{product.name}</td>
-                <td>{product.category}</td>
-                <td>{money(product.price)}</td>
-                <td>
-                  <input
-                    aria-label={`${product.name} stock`}
-                    type="number"
-                    min="0"
-                    defaultValue={product.stock}
-                    style={{ width: 80 }}
-                    onBlur={(event) => {
-                      if (Number(event.target.value) !== Number(product.stock)) updateStock(product.id, event.target.value);
-                    }}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <Pager page={data.page} pages={data.pages} total={data.total} onPage={goTo} />
-      </div>
+      <InventoryDesk
+        rows={rows}
+        page={data.page}
+        pages={data.pages}
+        total={data.total}
+        onPage={goTo}
+        onAdded={showNewPiece}
+        onSaved={showSavedPiece}
+      />
     );
   }
 
@@ -336,6 +325,248 @@ function Desk({ view }) {
         </tbody>
       </table>
       <Pager page={data.page} pages={data.pages} total={data.total} onPage={goTo} />
+    </div>
+  );
+}
+
+const EMPTY_PIECE = {
+  name: "",
+  brand: "ATELIER",
+  category: "Bouquets",
+  price: "",
+  compareAt: "",
+  stock: "1",
+  description: "",
+  image: "",
+  details: "",
+};
+
+function formFromProduct(product) {
+  return {
+    id: product.id,
+    name: product.name || "",
+    brand: product.brand || "",
+    category: product.category || "Bouquets",
+    price: product.price ?? "",
+    compareAt: product.compareAt || "",
+    stock: product.stock ?? 0,
+    badge: product.badge === "SOLD OUT" ? "" : product.badge || "",
+    description: product.description || "",
+    additional: product.additional || "",
+    image: (product.images || []).join("\n"),
+    details: (product.details || []).join("\n"),
+    sizes: (product.sizes || []).join("\n"),
+    colors: (product.colors || []).map((color) => `${color.name}:${color.hex}`).join("\n"),
+    featured: Boolean(product.featured),
+    trending: Boolean(product.trending),
+    madeToOrder: Boolean(product.madeToOrder),
+  };
+}
+
+function InventoryDesk({ rows, page, pages, total, onPage, onAdded, onSaved }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_PIECE);
+  const [editing, setEditing] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_PIECE);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [editError, setEditError] = useState("");
+  const pieceCategories = categories.filter((item) => item.id !== "All");
+
+  useEffect(() => {
+    if (!editing) return undefined;
+    function onKey(event) {
+      if (event.key === "Escape") setEditing(null);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [editing]);
+
+  function setField(field) {
+    return (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
+  }
+
+  function setEditField(field) {
+    return (event) => {
+      const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
+      setEditForm((current) => ({ ...current, [field]: value }));
+    };
+  }
+
+  function openEdit(product) {
+    setOpen(false);
+    setEditError("");
+    setEditForm(formFromProduct(product));
+    setEditing(product);
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    const name = form.name.trim();
+    const price = Math.round(Number(form.price));
+    if (!name) {
+      setFormError("Name the piece.");
+      return;
+    }
+    if (!price || price < 1) {
+      setFormError("Enter a price.");
+      return;
+    }
+    setSaving(true);
+    setFormError("");
+    try {
+      await call("productCreate", {
+        token: token(),
+        ...form,
+        name,
+        price,
+        stock: form.stock,
+        compareAt: form.compareAt,
+      });
+      setForm(EMPTY_PIECE);
+      setOpen(false);
+      onAdded();
+    } catch (err) {
+      const message = err.message === "Unknown request."
+        ? "The studio API needs the latest Apps Script deployed before it can save a new piece."
+        : err.message;
+      setFormError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveEdit(event) {
+    event.preventDefault();
+    const name = editForm.name.trim();
+    const price = Math.round(Number(editForm.price));
+    if (!name) {
+      setEditError("Name the piece.");
+      return;
+    }
+    if (!price || price < 1) {
+      setEditError("Enter a price.");
+      return;
+    }
+    setSaving(true);
+    setEditError("");
+    try {
+      await call("productUpdate", { token: token(), ...editForm, name, price });
+      setEditing(null);
+      onSaved();
+    } catch (err) {
+      const message = err.message === "Unknown request."
+        ? "The studio API needs the latest Apps Script deployed before it can update a piece."
+        : err.message;
+      setEditError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const editCategories = pieceCategories.some((item) => item.id === editForm.category)
+    ? pieceCategories
+    : [{ id: editForm.category, label: editForm.category }, ...pieceCategories];
+
+  return (
+    <div>
+      <div className="piece-bar">
+        <p className="quiet">{total} pieces in the studio</p>
+        <button className="ghost" type="button" onClick={() => { setOpen((value) => !value); setFormError(""); }}>
+          {open ? "Close" : "Add a piece"}
+        </button>
+      </div>
+      {open && (
+        <form className="stack piece-form" onSubmit={submit}>
+          <div className="stack two">
+            <label>Name<input value={form.name} onChange={setField("name")} required /></label>
+            <label>Brand<input value={form.brand} onChange={setField("brand")} /></label>
+          </div>
+          <div className="stack two">
+            <label>Category
+              <select value={form.category} onChange={setField("category")}>
+                {pieceCategories.map((item) => <option key={item.id}>{item.id}</option>)}
+              </select>
+            </label>
+            <label>Stock<input type="number" min="0" value={form.stock} onChange={setField("stock")} /></label>
+          </div>
+          <div className="stack two">
+            <label>Price<input type="number" min="1" step="1" value={form.price} onChange={setField("price")} required /></label>
+            <label>Compare at<input type="number" min="0" step="1" value={form.compareAt} onChange={setField("compareAt")} placeholder="Optional sale price" /></label>
+          </div>
+          <label>Description<textarea rows="3" value={form.description} onChange={setField("description")} /></label>
+          <label>Photo link<input value={form.image} onChange={setField("image")} placeholder="https://" /></label>
+          <label>Details<textarea rows="3" value={form.details} onChange={setField("details")} placeholder="One line for each detail" /></label>
+          <button type="submit" disabled={saving}>{saving ? "Saving" : "Save piece"}</button>
+          {formError && <p className="error">{formError}</p>}
+        </form>
+      )}
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Piece</th><th>Category</th><th>Price</th><th>Stock</th><th>Action</th></tr></thead>
+          <tbody>
+            {rows.map((product) => (
+              <tr key={product.id}>
+                <td>{product.name}</td>
+                <td>{product.category}</td>
+                <td>{money(product.price)}</td>
+                <td>{product.stock}</td>
+                <td><button className="ghost" type="button" onClick={() => openEdit(product)}>Edit</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <Pager page={page} pages={pages} total={total} onPage={onPage} />
+      </div>
+      {editing && (
+        <div className="modal-back" onClick={() => setEditing(null)}>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-piece-title" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2 id="edit-piece-title">Edit {editing.name}</h2>
+              <button className="ghost" type="button" onClick={() => setEditing(null)}>Close</button>
+            </div>
+            <form className="stack piece-form modal-form" onSubmit={saveEdit}>
+              <div className="stack two">
+                <label>Name<input value={editForm.name} onChange={setEditField("name")} required /></label>
+                <label>Brand<input value={editForm.brand} onChange={setEditField("brand")} /></label>
+              </div>
+              <div className="stack two">
+                <label>Category
+                  <select value={editForm.category} onChange={setEditField("category")}>
+                    {editCategories.map((item) => <option key={item.id}>{item.id}</option>)}
+                  </select>
+                </label>
+                <label>Stock<input type="number" min="0" value={editForm.stock} onChange={setEditField("stock")} /></label>
+              </div>
+              <div className="stack two">
+                <label>Price<input type="number" min="1" step="1" value={editForm.price} onChange={setEditField("price")} required /></label>
+                <label>Compare at<input type="number" min="0" step="1" value={editForm.compareAt} onChange={setEditField("compareAt")} placeholder="Optional sale price" /></label>
+              </div>
+              <div className="stack two">
+                <label>Badge<input value={editForm.badge} onChange={setEditField("badge")} placeholder="SALE, NEW" /></label>
+                <div className="checks">
+                  <label className="check"><input type="checkbox" checked={editForm.featured} onChange={setEditField("featured")} /> Featured</label>
+                  <label className="check"><input type="checkbox" checked={editForm.trending} onChange={setEditField("trending")} /> Trending</label>
+                  <label className="check"><input type="checkbox" checked={editForm.madeToOrder} onChange={setEditField("madeToOrder")} /> Made to order</label>
+                </div>
+              </div>
+              <label>Description<textarea rows="3" value={editForm.description} onChange={setEditField("description")} /></label>
+              <label>Care<textarea rows="2" value={editForm.additional} onChange={setEditField("additional")} /></label>
+              <label>Photos<textarea rows="3" value={editForm.image} onChange={setEditField("image")} placeholder="One image link per line" /></label>
+              <label>Details<textarea rows="3" value={editForm.details} onChange={setEditField("details")} placeholder="One line for each detail" /></label>
+              <div className="stack two">
+                <label>Sizes<textarea rows="3" value={editForm.sizes} onChange={setEditField("sizes")} placeholder="One size per line" /></label>
+                <label>Colors<textarea rows="3" value={editForm.colors} onChange={setEditField("colors")} placeholder="Name:#hex" /></label>
+              </div>
+              <div className="modal-actions">
+                <button type="submit" disabled={saving}>{saving ? "Saving" : "Save changes"}</button>
+                <button className="ghost" type="button" onClick={() => setEditing(null)}>Cancel</button>
+              </div>
+              {editError && <p className="error">{editError}</p>}
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
