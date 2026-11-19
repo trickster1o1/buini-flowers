@@ -6,6 +6,7 @@ import { useShop } from "../context/ShopContext";
 import useProducts from "../components/useProducts";
 import useTitle from "../components/useTitle";
 import ProductCard from "../components/ProductCard";
+import FlowerLoader from "../components/FlowerLoader";
 
 export default function Product() {
   const { slug } = useParams();
@@ -45,7 +46,7 @@ export default function Product() {
   if (error) {
     return <div className="wrap page empty"><h1>{error}</h1><Link className="btn" to="/shop">Back to the shop</Link></div>;
   }
-  if (!product) return <div className="wrap page"><div className="skeleton" /></div>;
+  if (!product) return <div className="wrap page"><FlowerLoader label="Loading this piece" /></div>;
 
   const reviews = product.reviews || productReviews(product.id);
   const related = items.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 4);

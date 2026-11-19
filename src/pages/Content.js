@@ -9,6 +9,7 @@ import { useShop } from "../context/ShopContext";
 import useProducts from "../components/useProducts";
 import useTitle from "../components/useTitle";
 import ProductCard from "../components/ProductCard";
+import FlowerLoader from "../components/FlowerLoader";
 
 export function Blog() {
   useTitle("Blog");
@@ -135,7 +136,7 @@ export function StaticPage() {
   }, [slug]);
 
   if (error) return <div className="wrap page empty"><h1>{error}</h1></div>;
-  if (!page) return <div className="wrap page"><div className="skeleton" /></div>;
+  if (!page) return <div className="wrap page"><FlowerLoader label="Loading this page" /></div>;
 
   return (
     <div className="wrap page">

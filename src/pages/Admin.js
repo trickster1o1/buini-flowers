@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import rose from "../rose.jpg";
 import { call, invalidateProducts, invalidateSite, isRemote, loadSite } from "../api/client";
 import { ADMIN_EMAIL, ADMIN_PASSWORD, categories, formatDate, money } from "../data/catalog";
 import useTitle from "../components/useTitle";
+import FlowerLoader from "../components/FlowerLoader";
 
 const STATUSES = ["New", "Processing", "Ready", "Out for delivery", "Delivered", "Cancelled"];
 const VIEWS = [
@@ -21,11 +21,7 @@ function token() {
 }
 
 function DeskLoader() {
-  return (
-    <div className="desk-loader" role="status" aria-label="Loading the studio desk">
-      <img src={rose} alt="" />
-    </div>
-  );
+  return <FlowerLoader compact label="Loading the studio desk" />;
 }
 
 const PAGE_SIZE = 8;

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { posts } from "../data/catalog";
 import { Mark } from "../components/Icons";
 import ProductCard from "../components/ProductCard";
+import FlowerLoader from "../components/FlowerLoader";
 import useProducts from "../components/useProducts";
 import useSite from "../components/useSite";
 import useTitle from "../components/useTitle";
@@ -67,11 +68,11 @@ export default function Home() {
       <section className="wrap">
         <h2 className="sec-title">The edit</h2>
         {error && <p className="error">{error}</p>}
-        <div className="grid-4">
-          {loading && items.length === 0
-            ? [0, 1, 2, 3].map((item) => <div key={item} className="skeleton" />)
-            : edit.map((product) => <ProductCard key={product.id} product={product} />)}
-        </div>
+        {loading && items.length === 0 ? <FlowerLoader label="Loading the edit" /> : (
+          <div className="grid-4">
+            {edit.map((product) => <ProductCard key={product.id} product={product} />)}
+          </div>
+        )}
       </section>
 
       <section className="looks">

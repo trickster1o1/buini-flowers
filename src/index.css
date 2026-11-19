@@ -560,22 +560,71 @@ tr.active { background: #fafafa; }
   text-transform: uppercase;
   font-size: 11px;
 }
-.skeleton { aspect-ratio: 3 / 4; background: linear-gradient(90deg, #f3f1ee, #e7e2dc, #f3f1ee); }
-.desk-loader {
-  min-height: 420px;
+.flower-loader {
+  min-height: 52vh;
   display: grid;
   place-items: center;
 }
-.desk-loader img {
-  width: 84px;
-  height: 84px;
-  object-fit: cover;
-  border-radius: 50%;
-  animation: desk-bloom 1.4s ease-in-out infinite;
+.flower-loader.compact { min-height: 320px; }
+.flower-loader svg { transform-origin: 60px 144px; animation: flower-sway 2.8s ease-in-out infinite; }
+.petal {
+  fill: #f4efe6;
+  stroke: #1c1c1c;
+  stroke-width: 1.15;
+  stroke-linejoin: round;
+  transform-box: view-box;
+  transform-origin: 60px 74px;
+  animation: petal-bloom 2.2s ease-in-out infinite;
 }
-@keyframes desk-bloom {
-  0%, 100% { transform: scale(0.92); opacity: 0.5; }
+.petal-inner { fill: #e7b7b0; }
+.flower-heart {
+  fill: #c47a5a;
+  stroke: #1c1c1c;
+  stroke-width: 1;
+  transform-box: view-box;
+  transform-origin: 60px 74px;
+  animation: heart-beat 2.2s ease-in-out infinite;
+}
+.flower-stem,
+.flower-leaf {
+  fill: none;
+  stroke: #7d9468;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.flower-leaf { fill: #dfe6d4; }
+.flower-stem {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: stem-grow 1.1s ease forwards;
+}
+.leaf-left { animation: leaf-in 0.8s ease 0.7s both; }
+.leaf-right { animation: leaf-in 0.8s ease 0.95s both; }
+@keyframes petal-bloom {
+  0%, 100% { transform: scale(0.86); opacity: 0.82; }
   50% { transform: scale(1); opacity: 1; }
+}
+@keyframes heart-beat {
+  0%, 100% { transform: scale(0.8); }
+  50% { transform: scale(1); }
+}
+@keyframes stem-grow { to { stroke-dashoffset: 0; } }
+@keyframes leaf-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes flower-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flower-loader svg,
+  .petal,
+  .flower-heart,
+  .flower-stem,
+  .flower-leaf { animation: none; }
+  .flower-stem { stroke-dashoffset: 0; }
 }
 
 @media (max-width: 1100px) {

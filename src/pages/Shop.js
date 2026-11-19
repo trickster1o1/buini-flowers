@@ -1,6 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { categories } from "../data/catalog";
 import ProductCard from "../components/ProductCard";
+import FlowerLoader from "../components/FlowerLoader";
 import useProducts from "../components/useProducts";
 import useTitle from "../components/useTitle";
 
@@ -80,11 +81,11 @@ export default function Shop() {
         </select>
       </div>
       {error && <p className="error">{error}</p>}
-      <div className="grid-4">
-        {loading && items.length === 0
-          ? Array.from({ length: 8 }, (_, index) => <div key={index} className="skeleton" />)
-          : slice.map((product) => <ProductCard key={product.id} product={product} />)}
-      </div>
+      {loading && items.length === 0 ? <FlowerLoader label="Loading the shop" /> : (
+        <div className="grid-4">
+          {slice.map((product) => <ProductCard key={product.id} product={product} />)}
+        </div>
+      )}
       {!loading && list.length === 0 && <p className="empty">Nothing in this edit yet.</p>}
       <p className="showing">Showing {from}–{to} of {list.length}</p>
       {pages > 1 && (
